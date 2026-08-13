@@ -1,3 +1,11 @@
+name: Testes E2E - Instalador A11y
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
 jobs:
   test-windows-installation:
     runs-on: windows-latest
@@ -19,16 +27,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install pyinstaller rich
 
-      - name: Mock de Dependências Binárias
-        # Simula a existência dos binários na pasta bin/
+      - name: Preparar Dependências Binárias
         run: |
+          # Cria a pasta bin
           New-Item -ItemType Directory -Path "bin" -Force
-          New-Item -ItemType File -Path "bin/nvdaControllerClient64.dll" -Force
-          New-Item -ItemType File -Path "bin/nvdaControllerClient32.dll" -Force
-          New-Item -ItemType File -Path "bin/SharpWin.exe" -Force
+          
+          # Baixa o SharpWin.exe real da Release no GitHub
+          $SharpWinUrl = "https://github.com/A11yDevs/emacs-a11y-installer/releases/download/deps-v1/SharpWin.exe"
+          Invoke-WebRequest -Uri $SharpWinUrl -OutFile "bin\SharpWin.exe"
 
       - name: Executar Script de Build
-        run: python scripts/build.py
+        run: python scripts/build_script.py
 
       - name: Executar o Instalador (Opção ${{ matrix.user_choice }})
         run: |
@@ -50,4 +59,9 @@ jobs:
           elseif ("${{ matrix.user_choice }}" -eq "2") {
               Write-Host "Validando arquivos do Leitor de Telas Nativo..."
               if (-Not (Test-Path "$EmacsDir\nvda_server.exe")) { exit 1 }
+              
+              # Validação a mais pra garantir que a DLL também foi pro lugar certo
+              $Dll32 = Test-Path "$EmacsDir\nvdaControllerClient32.dll"
+              $Dll64 = Test-Path "$EmacsDir\nvdaControllerClient64.dll"
+              if (-Not ($Dll32 -or $Dll64)) { exit 1 }
           }

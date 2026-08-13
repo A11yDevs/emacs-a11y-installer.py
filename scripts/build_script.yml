@@ -32,12 +32,8 @@ jobs:
           # Cria a pasta bin caso ela não exista
           New-Item -ItemType Directory -Path "bin" -Force
           
-          - name: Baixar Dependências Pesadas
-        run: |
-          New-Item -ItemType Directory -Path "bin" -Force
-          Invoke-WebRequest -Uri "https://github.com/A11yDevs/emacs-a11y-installer/releases/download/deps-v1/SharpWin.exe" -OutFile "bin\SharpWin.exe"
+          # Baixa o SharpWin.exe real da Release no GitHub
           $SharpWinUrl = "https://github.com/A11yDevs/emacs-a11y-installer/releases/download/deps-v1/SharpWin.exe"
-          
           Write-Host "Baixando SharpWin.exe..."
           Invoke-WebRequest -Uri $SharpWinUrl -OutFile "bin\SharpWin.exe"
 

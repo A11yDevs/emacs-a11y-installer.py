@@ -3,7 +3,6 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        # Define as opções que o instalador aceita (1 = Configuração do Desenvolvedor, 2 = Leitor de Tela Nativo)
         user_choice: [1, 2]
 
     steps:
@@ -21,35 +20,28 @@ jobs:
           pip install pyinstaller rich
 
       - name: Mock de Dependências Binárias
+        # Simula a existência dos binários na pasta bin/
         run: |
-          New-Item -ItemType File -Path "nvda_server.exe" -Force
-          New-Item -ItemType File -Path "nvdaControllerClient64.dll" -Force
-          New-Item -ItemType File -Path "nvdaControllerClient32.dll" -Force
-          New-Item -ItemType File -Path "SharpWin.exe" -Force
+          New-Item -ItemType Directory -Path "bin" -Force
+          New-Item -ItemType File -Path "bin/nvdaControllerClient64.dll" -Force
+          New-Item -ItemType File -Path "bin/nvdaControllerClient32.dll" -Force
+          New-Item -ItemType File -Path "bin/SharpWin.exe" -Force
 
-      - name: Construir o Instalador
-        run: |
-          pyinstaller --onefile `
-            --add-binary "nvda_server.exe;." `
-            --add-binary "nvdaControllerClient64.dll;." `
-            --add-binary "nvdaControllerClient32.dll;." `
-            --add-binary "SharpWin.exe;." `
-            installer-a11y.py
+      - name: Executar Script de Build
+        run: python scripts/build.py
 
       - name: Executar o Instalador (Opção ${{ matrix.user_choice }})
         run: |
-          # O GitHub Actions vai substituir a variável pelo número da matriz
+          # Simula a interação do usuário com o executável gerado na pasta dist/
           Write-Output "${{ matrix.user_choice }}`n`n" | .\dist\installer-a11y.exe
 
       - name: Validar Configuração
         run: |
           $EmacsDir = "$env:USERPROFILE\.emacs.d"
           
-          # Validações comuns a ambas as escolhas
           if (-Not (Test-Path "$EmacsDir\init.el")) { exit 1 }
           if (-Not (Test-Path "$EmacsDir\emacspeak")) { exit 1 }
           
-          # Validações específicas baseadas na escolha da matriz
           if ("${{ matrix.user_choice }}" -eq "1") {
               Write-Host "Validando arquivos da Configuração do Desenvolvedor..."
               if (-Not (Test-Path "$EmacsDir\lisp\init-accessibility.el")) { exit 1 }
@@ -58,5 +50,4 @@ jobs:
           elseif ("${{ matrix.user_choice }}" -eq "2") {
               Write-Host "Validando arquivos do Leitor de Telas Nativo..."
               if (-Not (Test-Path "$EmacsDir\nvda_server.exe")) { exit 1 }
-              # O nome da DLL vai variar pra arquitetura (32 ou 64 bits) do runner do GitHub
           }

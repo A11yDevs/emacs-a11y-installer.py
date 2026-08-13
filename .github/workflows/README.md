@@ -1,6 +1,6 @@
 # `e2e-tests.yml`
 
-Documentação do workflow de testes end-to-end do projeto `emacs-a11y-installer.py`.
+Documentação do workflow de testes do inicio ao fim do projeto `emacs-a11y-installer.py`.
 
 Arquivo:
 
@@ -182,29 +182,6 @@ Depois espera que o resultado esteja em:
 ```text
 dist\installer-a11y.exe
 ```
-
-## Ponto de atenção do repositório
-
-Na versão atualmente publicada do branch `main`, o diretório `scripts/` apresenta:
-
-```text
-README.md
-build.yml
-```
-
-mas não apresenta `build.py`.
-
-Logo, existe uma dependência quebrada entre o workflow e a árvore atual do repositório:
-
-```text
-e2e-tests.yml
-      │
-      └── chama → scripts/build.py
-                       │
-                       └── arquivo não presente na árvore atual
-```
-
-Enquanto essa inconsistência existir, o workflow não conseguirá concluir a etapa de build.
 
 ## 6. Execução do instalador
 

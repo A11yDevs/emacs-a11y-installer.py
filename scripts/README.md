@@ -1,6 +1,6 @@
 # `build.yml`
 
-Documentação do arquivo `scripts/build.yml` do projeto `emacs-a11y-installer.py`.
+Documentação do arquivo de teste da arquitetura e ambiente do projeto `emacs-a11y-installer.py` 
 
 Arquivo:
 
@@ -73,30 +73,6 @@ e uma matriz:
 matrix:
   user_choice: [1, 2]
 ```
-
-## O problema do local do arquivo
-
-O GitHub Actions procura workflows dentro de:
-
-```text
-.github/workflows/
-```
-
-Entretanto, este arquivo está em:
-
-```text
-scripts/build.yml
-```
-
-Logo, ele não funciona como workflow ativo apenas por estar no repositório.
-
-Na prática, o workflow reconhecido pelo GitHub é:
-
-```text
-.github/workflows/e2e-tests.yml
-```
-
-O `build.yml` em `scripts/` é apenas um arquivo YAML armazenado no repositório, a menos que alguma ferramenta externa o leia explicitamente.
 
 ## Conteúdo do pipeline
 
@@ -210,86 +186,9 @@ e pelo menos uma DLL:
 %USERPROFILE%\.emacs.d\nvdaControllerClient64.dll
 ```
 
-## Relação com `e2e-tests.yml`
-
-No estado atual do repositório, os dois arquivos descrevem essencialmente o mesmo processo.
-
-| Arquivo | Localização | Reconhecido automaticamente pelo GitHub Actions? | Função |
-|---|---|---:|---|
-| `e2e-tests.yml` | `.github/workflows/` | Sim | Workflow ativo de CI |
-| `build.yml` | `scripts/` | Não | Cópia/descrição de workflow armazenada como YAML |
-
-Isso torna `build.yml` potencialmente redundante.
-
-## Dependência de `scripts/build.py`
-
-Tanto `build.yml` quanto `e2e-tests.yml` chamam:
-
-```powershell
-python scripts/build.py
-```
-
-Entretanto, a árvore atualmente publicada em `scripts/` não apresenta `build.py`.
-
-A estrutura observada é:
-
-```text
-scripts/
-├── README.md
-└── build.yml
-```
-
-Portanto, o arquivo `build.yml` documenta uma etapa que depende de um script que não está presente na árvore atual.
-
-## Consequência prática
-
-Se o workflow ativo seguir exatamente esta configuração, a execução chegará à etapa:
-
-```powershell
-python scripts/build.py
-```
-
-e falhará caso `build.py` realmente não exista no commit utilizado pelo runner.
-
-Uma documentação correta deve manter essa condição explícita, porque esconder uma dependência ausente só transforma um problema de repositório em uma sessão coletiva de arqueologia digital depois.
-
-## Possíveis formas de organização
-
-A estrutura pode ser normalizada de algumas maneiras:
-
-### Alternativa 1: manter um único workflow
-
-Manter:
-
-```text
-.github/workflows/e2e-tests.yml
-```
-
-e remover a duplicação de:
-
-```text
-scripts/build.yml
-```
-
-quando ele não tiver finalidade independente.
-
-### Alternativa 2: transformar `build.yml` em documentação
-
-Se a intenção for documentar o pipeline, o conteúdo pode ser convertido para Markdown em vez de permanecer como YAML fora de `.github/workflows`.
-
-### Alternativa 3: criar o `build.py` esperado
-
-Se o `build.py` foi removido acidentalmente ou está previsto para existir, ele deve ser restaurado em:
-
-```text
-scripts/build.py
-```
-
-para que o workflow possa executar a etapa definida.
-
 ## Resumo
 
-O `build.yml` representa um pipeline de construção + teste que:
+O `build.yml` representa uma verificação de construção + teste que:
 
 ```text
 1. prepara Windows
@@ -301,7 +200,3 @@ O `build.yml` representa um pipeline de construção + teste que:
 7. testa as opções 1 e 2
 8. valida os arquivos do Emacs/Emacspeak
 ```
-
-Porém, atualmente ele está localizado fora do diretório de workflows e, portanto, não é um workflow ativo do GitHub Actions.
-
-Além disso, ele referencia `scripts/build.py`, que não aparece na árvore atual de `scripts/`.

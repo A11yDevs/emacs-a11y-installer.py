@@ -262,4 +262,3 @@ Esse workflow:
 - testa as duas escolhas de configuração;
 - valida os arquivos criados em `~/.emacs.d`.
 
-O arquivo `scripts/build.yml` contém atualmente uma configuração YAML muito semelhante ao workflow E2E, mas por estar fora de `.github/workflows`, ele não é automaticamente tratado pelo GitHub Actions como workflow.

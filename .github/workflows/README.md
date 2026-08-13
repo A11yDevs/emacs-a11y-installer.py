@@ -1,4 +1,4 @@
-# README - `e2e-tests.yml`
+# `e2e-tests.yml`
 
 Documentação do workflow de testes end-to-end do projeto `emacs-a11y-installer.py`.
 

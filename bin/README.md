@@ -1,1 +1,1 @@
-## Binários externos e DLLs de execução. 
+## Binários externos de execução. 

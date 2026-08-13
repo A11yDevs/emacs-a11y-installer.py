@@ -37,7 +37,7 @@ jobs:
           Invoke-WebRequest -Uri $SharpWinUrl -OutFile "bin\SharpWin.exe"
 
       - name: Executar Script de Build
-        run: python scripts/build_script.py
+        run: python scripts/build.py
 
       - name: Executar o Instalador (Opção ${{ matrix.user_choice }})
         run: |

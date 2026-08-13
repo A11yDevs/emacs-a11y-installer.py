@@ -426,6 +426,7 @@ if __name__ == "__main__":
     installer = get_installer()
     installer.install_dependencies()
     installer.setup_emacspeak(use_native)
-    
+
+    # Input final para manter o terminal aberto após a conclusão da instalação
     console.print("\n[bold green]Todas as etapas foram concluídas com sucesso. O ambiente está pronto para uso.[/bold green]")
     input("\nPressione a tecla Enter para finalizar e fechar o instalador.")

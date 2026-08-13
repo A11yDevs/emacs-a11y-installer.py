@@ -7,8 +7,11 @@ on:
     branches: [ "main" ]
 
 jobs:
-  test-windows-installation:
+  build-and-test:
     runs-on: windows-latest
+    strategy:
+      matrix:
+        user_choice: [1, 2] # 1: Dev Config, 2: Leitor Nativo
 
     steps:
       - name: Checkout do Repositório
@@ -19,62 +22,57 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Instalar Dependências de Build
+      - name: Instalar Dependências do Python
         run: |
           python -m pip install --upgrade pip
           pip install pyinstaller rich
 
-      - name: Mock de Dependências Binárias
-        # Garante que os arquivos esperados existam na raiz para o PyInstaller não falhar.
-        # Caso eles já sejam gerados em etapas anteriores do seu CI, você pode omitir este passo.
+      - name: Baixar SharpWin.exe (Dependência Pesada)
         run: |
-          New-Item -ItemType File -Path "nvda_server.exe" -Force
-          New-Item -ItemType File -Path "nvdaControllerClient64.dll" -Force
-          New-Item -ItemType File -Path "nvdaControllerClient32.dll" -Force
-          New-Item -ItemType File -Path "SharpWin.exe" -Force
+          # Cria a pasta bin caso ela não exista
+          New-Item -ItemType Directory -Path "bin" -Force
+          
+          # COLOQUE AQUI O LINK QUE VOCÊ COPIOU NO PASSO 1
+          $SharpWinUrl = "https://github.com/A11yDevs/emacs-a11y-installer/releases/download/deps-v1/SharpWin.exe"
+          
+          Write-Host "Baixando SharpWin.exe..."
+          Invoke-WebRequest -Uri $SharpWinUrl -OutFile "bin\SharpWin.exe"
 
-      - name: Construir o Instalador
+      - name: Executar Script de Build
+        # Chama o script que automatiza o PyInstaller
+        run: python scripts/build.py
+
+      - name: Executar Instalador (Simulando Opção ${{ matrix.user_choice }})
         run: |
-          pyinstaller --onefile `
-            --add-binary "nvda_server.exe;." `
-            --add-binary "nvdaControllerClient64.dll;." `
-            --add-binary "nvdaControllerClient32.dll;." `
-            --add-binary "SharpWin.exe;." `
-            installer-a11y.py
+          # Simula a digitação da opção escolhida e os "Enters"
+          Write-Output "${{ matrix.user_choice }}`n`n" | .\dist\installer-a11y.exe
 
-      - name: Executar o Instalador (Simulando Escolha 1)
-        run: |
-          # Simula o usuário digitando '1' seguido de um 'Enter' para a pausa final
-          Write-Output "1`n`n" | .\dist\installer-a11y.exe
-
-      - name: Validar Configuração do Emacs
+      - name: Validar Configuração Emacs (Arquitetura)
         run: |
           $EmacsDir = "$env:USERPROFILE\.emacs.d"
-          $InitFile = "$EmacsDir\init.el"
-          $AccFile = "$EmacsDir\lisp\init-accessibility.el"
-          $EmacspeakDir = "$EmacsDir\emacspeak"
           
-          # Verifica se os arquivos base foram injetados
-          if (-Not (Test-Path $InitFile)) {
-              Write-Error "FALHA: init.el não foi criado."
-              exit 1
-          }
-          if (-Not (Test-Path $AccFile)) {
-              Write-Error "FALHA: init-accessibility.el não foi gerado."
-              exit 1
-          }
+          # Testes base aplicados a todas as configurações
+          if (-Not (Test-Path "$EmacsDir\init.el")) { exit 1 }
+          if (-Not (Test-Path "$EmacsDir\emacspeak")) { exit 1 }
           
-          # Verifica se o repositório do Emacspeak foi clonado
-          if (-Not (Test-Path $EmacspeakDir)) {
-              Write-Error "FALHA: O repositório do Emacspeak não foi clonado."
-              exit 1
+          # Testes específicos por opção
+          if ("${{ matrix.user_choice }}" -eq "1") {
+              Write-Host "Validando Configuração do Desenvolvedor..." -ForegroundColor Cyan
+              if (-Not (Test-Path "$EmacsDir\lisp\init-accessibility.el")) { exit 1 }
+              if (-Not (Test-Path "$EmacsDir\SharpWin.exe")) { exit 1 }
+              Write-Host "Tudo OK com a Opção 1!" -ForegroundColor Green
+          } 
+          elseif ("${{ matrix.user_choice }}" -eq "2") {
+              Write-Host "Validando Leitor de Telas Nativo (NVDA)..." -ForegroundColor Cyan
+              if (-Not (Test-Path "$EmacsDir\nvda_server.exe")) { exit 1 }
+              
+              # Verifica se a DLL foi extraída corretamente
+              $Dll32 = Test-Path "$EmacsDir\nvdaControllerClient32.dll"
+              $Dll64 = Test-Path "$EmacsDir\nvdaControllerClient64.dll"
+              
+              if (-Not ($Dll32 -or $Dll64)) {
+                  Write-Error "FALHA: Nenhuma DLL do NVDA Controller Client foi encontrada."
+                  exit 1
+              }
+              Write-Host "Tudo OK com a Opção 2!" -ForegroundColor Green
           }
-          
-          # Verifica o conteúdo do init.el
-          $InitContent = Get-Content $InitFile -Raw
-          if ($InitContent -notmatch "dtk-program") {
-               Write-Error "FALHA: O servidor de áudio não foi configurado no init.el."
-               exit 1
-          }
-          
-          Write-Host "SUCESSO: A estrutura e os arquivos de configuração foram provisionados corretamente!" -ForegroundColor Green

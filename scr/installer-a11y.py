@@ -25,6 +25,7 @@ class BaseInstaller:
             sys.exit(1)
 
     # Função para injetar o arquivo de configuração de acessibilidade (init-accessibility.el) no diretório do usuário.
+    # Este arquivo contém configurações de voz e acessibilidade para o GNU Emacs/Emacspeak, verifica o sistema operacional e aplica a voz adequada.
     def inject_accessibility_el(self):
         """Gera o arquivo de configurações de voz do desenvolvedor (init-accessibility.el)."""
         emacs_dir = os.path.expanduser("~/.emacs.d")
@@ -80,14 +81,17 @@ class BaseInstaller:
       (ignore-errors
         (delete-process proc)))))
 
-;; --- Configuração de Idioma ---
+;; --- Configuração de Idioma Multiplataforma ---
 (defun my/emacspeak-apply-language ()
-  "Aplica português do Brasil forçando o nome exato da voz no SAPI."
+  "Aplica português do Brasil adequando a voz ao sistema."
   (interactive)
-  ;; Usa código padrão minúsculo para não quebrar o Emacspeak interno
   (ignore-errors (dtk-set-language "pt-br"))
-  ;; Envia o comando 'v' para o SharpWin com o nome exato do Windows
-  (ignore-errors (dtk-set-voice "Microsoft Maria Desktop"))
+  
+  ;; Checa se é Windows (SharpWin) ou Linux (eSpeak)
+  (if (eq system-type 'windows-nt)
+      (ignore-errors (dtk-set-voice "Microsoft Maria Desktop"))
+    (ignore-errors (dtk-set-voice "pt")))
+    
   (setq dtk-speech-rate 180))
 
 ;; Inicialização de hooks temporizados para garantir carregamento seguro
@@ -103,7 +107,7 @@ class BaseInstaller:
   "Idioma atual do Emacspeak controlado pelo usuário.")
 
 (defun my/emacspeak-toggle-language ()
-  "Alterna rapidamente entre português do Brasil (Maria) e inglês (Zira)."
+  "Alterna rapidamente entre português e inglês adequando ao sistema."
   (interactive)
   (when (fboundp 'dtk-stop)
     (dtk-stop))
@@ -112,7 +116,9 @@ class BaseInstaller:
       ;; Bloco: Transição para Inglês
       (progn
         (ignore-errors (dtk-set-language "en"))
-        (ignore-errors (dtk-set-voice "Microsoft Zira Desktop"))
+        (if (eq system-type 'windows-nt)
+            (ignore-errors (dtk-set-voice "Microsoft Zira Desktop"))
+          (ignore-errors (dtk-set-voice "en")))
         (setq my/emacspeak-current-language "en")
         (run-with-timer
          0.2 nil
@@ -123,7 +129,9 @@ class BaseInstaller:
     ;; Bloco: Transição para Português
     (progn
       (ignore-errors (dtk-set-language "pt-br"))
-      (ignore-errors (dtk-set-voice "Microsoft Maria Desktop"))
+      (if (eq system-type 'windows-nt)
+          (ignore-errors (dtk-set-voice "Microsoft Maria Desktop"))
+        (ignore-errors (dtk-set-voice "pt")))
       (setq my/emacspeak-current-language "pt-br")
       (run-with-timer
        0.2 nil

@@ -33,7 +33,7 @@ jobs:
           New-Item -ItemType Directory -Path "bin" -Force
           
           # Baixa o SharpWin.exe real da Release no GitHub
-          $SharpWinUrl = "https://github.com/A11yDevs/emacs-a11y-installer/releases/download/deps-v1/SharpWin.exe"
+          $SharpWinUrl = "https://github.com/A11yDevs/emacs-a11y-installer.py/releases/download/deps-v1/SharpWin.exe"
           Write-Host "Baixando SharpWin.exe..."
           Invoke-WebRequest -Uri $SharpWinUrl -OutFile "bin\SharpWin.exe"
 

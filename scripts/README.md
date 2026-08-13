@@ -1,21 +1,21 @@
-# `build.yml`
+# `build.py`
 
 Documentação do arquivo de teste da arquitetura e ambiente do projeto `emacs-a11y-installer.py` 
 
 Arquivo:
 
 ```text
-scripts/build.yml
+scripts/build.py
 ```
 
 ## Objetivo aparente
 
-O conteúdo de `scripts/build.yml` descreve um pipeline de build e teste do instalador para Windows.
+O conteúdo de `scripts/build.py` descreve um pipeline de build e teste do instalador para Windows.
 
 Sua estrutura é praticamente a mesma do workflow atualmente localizado em:
 
 ```text
-.github/workflows/e2e-tests.yml
+.github/workflows/e2e-tests.py
 ```
 
 O fluxo descrito no arquivo é:

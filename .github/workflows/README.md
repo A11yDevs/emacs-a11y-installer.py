@@ -27,10 +27,16 @@ onde:
 
 ### Executando o Workflow E2E-Tests
 
-O arquivo `.github/workflows/e2e-tests.yml` **não é executado manualmente** por um comando via terminal. Ele funciona como um "gatilho" (trigger). Dada a configuração em blocos `push` e `pull_request` presentes no arquivo, o GitHub deve executá-lo sempre que for enviado um código novo para a branch `main`.
+O arquivo `.github/workflows/e2e-tests.yml` pode ser executado manualmente por um "gatilho" (trigger) presente na aba **actions** do GitHub ou após uma "alteração" (commit) em algum arquivo presente no repositório dada a configuração em blocos `push` e `pull_request` presentes no arquivo, o GitHub deve executá-lo sempre que for enviado um código novo para a branch `main`.
 
-**Como "executar":**
+### **Como "executar":**
+#### Via trigger no **actions**
 
+1. Acesse a aba **actions** do GitHub.
+2. Clique em "Teste E2E - Instalador A11y".
+3. Seleciona "Run Workflow" para a branch main.
+
+#### Via commit:
 1. Salve os arquivos alterados no seu computador (com o repositório devidamente clonado).
 2. Via terminal, adicione os arquivos modificados (nvda_server.py ou installer-a11y.py) ao Git, faça o commit e envie para o GitHub:
 ```bash

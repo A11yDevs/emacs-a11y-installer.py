@@ -42,6 +42,8 @@ jobs:
 
       # Executa o script de benchmark para validar a estabilidade e latência dos binários
       - name: Executar Benchmark de Estresse e Latência
+        env:
+          PYTHONIOENCODING: utf8 # Força o console do Windows a ler acentos corretamente
         run: python scripts/benchmark.py
 
       # Executa o instalador gerado com a escolha do usuário (1 ou 2)

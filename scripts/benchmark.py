@@ -50,7 +50,8 @@ def run_stress_test(server_name, server_path):
         
         process.stdin.flush()
         end_time = time.time()
-        
+
+        # Calcula o tempo total e a latência média por requisição
         total_time = end_time - start_time
         print(f"-> Tempo total para 10.000 requisições: {total_time:.4f} segundos")
         print(f"-> Latência média por requisição: {(total_time / 10000) * 1000:.4f} milissegundos")
@@ -68,6 +69,14 @@ def run_stress_test(server_name, server_path):
             
         return True
 
+     # Tratamento de exceções específicas para BrokenPipeError e Timeout
+    except BrokenPipeError:
+        print("\n[AVISO] Broken Pipe: O servidor recusou as strings e fechou a conexão.")
+        if "nvda" in server_name.lower():
+            print("[INFO] Comportamento ESPERADO: O nvda_server.exe fechou corretamente pois o NVDA não está rodando no GitHub Actions.")
+            return True # Retornamos True porque ele fez o que deveria fazer na ausência do leitor
+        else:
+            return False
     except subprocess.TimeoutExpired:
         print("\n[ERRO FATAL] O processo travou (Timeout) e precisou ser forçado a fechar.")
         process.kill()

@@ -5,6 +5,7 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch: # Permite que o workflow seja disparado manualmente na aba "Actions" do GitHub
 
 jobs:
   test-windows-installation:

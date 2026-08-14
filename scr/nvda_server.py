@@ -48,5 +48,6 @@ def main():
         except KeyboardInterrupt:
             break
 
+# Ponto de entrada do script
 if __name__ == "__main__":
     main()

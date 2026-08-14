@@ -1,10 +1,10 @@
-import platform
-import sys
-import subprocess
-import os
-import shutil
-import glob
-from rich.console import Console
+import platform # Biblioteca para detectar o sistema operacional e arquitetura
+import sys # Biblioteca para interagir com o interpretador Python
+import subprocess # Biblioteca para executar comandos do sistema operacional
+import os # Biblioteca para manipulação de arquivos e diretórios
+import shutil # Biblioteca para operações de alto nível em arquivos e diretórios
+import glob # Biblioteca para correspondência de padrões em nomes de arquivos
+from rich.console import Console # Biblioteca para exibir mensagens coloridas e formatadas no terminal
 
 console = Console()
 

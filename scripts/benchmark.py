@@ -3,6 +3,7 @@ import subprocess
 import time
 import sys
 
+# Função para executar o teste de stress em um servidor específico
 def run_stress_test(server_name, server_path):
     print(f"\n{'='*50}")
     print(f" Iniciando Benchmark: {server_name}")

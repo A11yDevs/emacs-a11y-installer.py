@@ -235,14 +235,6 @@ e espera encontrar:
 dist/installer-a11y.exe
 ```
 
-### Observação importante sobre o estado atual do repositório
-
-Na árvore atualmente publicada do repositório, `scripts/` contém `README.md` e `build.yml`, enquanto o workflow `e2e-tests.yml` referencia `scripts/build.py`.
-
-Isso significa que, no estado atualmente visível no branch `main`, existe uma inconsistência entre o workflow e a árvore de arquivos: o pipeline espera um `build.py` que não aparece em `scripts/`.
-
-Essa inconsistência deve ser corrigida antes de considerar o pipeline de build reproduzível.
-
 ## Integração contínua
 
 O projeto possui um workflow de testes E2E em:

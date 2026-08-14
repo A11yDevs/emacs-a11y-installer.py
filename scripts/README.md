@@ -8,15 +8,9 @@ Arquivo:
 scripts/build.py
 ```
 
-## Objetivo aparente
+## Objetivo
 
-O conteúdo de `scripts/build.py` descreve um pipeline de build e teste do instalador para Windows.
-
-Sua estrutura é praticamente a mesma do workflow atualmente localizado em:
-
-```text
-.github/workflows/e2e-tests.py
-```
+O conteúdo de `scripts/build.py` resume-se como um pipeline de build e teste do instalador para Windows.
 
 O fluxo descrito no arquivo é:
 
@@ -34,6 +28,29 @@ Executa scripts/build.py
 Executa dist/installer-a11y.exe
    ↓
 Valida ~/.emacs.d
+```
+
+### Executando o Script de Build Localmente
+
+O arquivo `scripts/build.py` serve para testar a compilação em uma máquina própria antes do envio de qualquer "coisa" para o GitHub.
+
+**Pré-requisitos na sua máquina:**
+Como o GitHub Actions vai baixar o `SharpWin.exe` automaticamente na nuvem, para rodar esse script no seu computador, é necessário garantir que a pasta `bin/` já exista na raiz do projeto e contenha o `SharpWin.exe` e as duas `.dll` do NVDA.
+
+**Como executar:**
+
+1. Via terminal (PowerShell, CMD ou terminal do VS Code).
+2. Certifique-se de estar na pasta raiz do projeto (emacs-installer-a11y.py/scripts).
+3. Instale as dependências (se ausentes):
+```bash
+pip install pyinstaller rich
+
+```
+
+4. Execute o script:
+```bash
+python scripts/build.py
+
 ```
 
 ## Estrutura

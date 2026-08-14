@@ -25,6 +25,29 @@ onde:
 | `1` | Configuração do Desenvolvedor |
 | `2` | Leitor de Telas Nativo |
 
+### Executando o Workflow E2E-Tests
+
+O arquivo `.github/workflows/e2e-tests.yml` **não é executado manualmente** por um comando via terminal. Ele funciona como um "gatilho" (trigger). Dada a configuração em blocos `push` e `pull_request` presentes no arquivo, o GitHub deve executá-lo sempre que for enviado um código novo para a branch `main`.
+
+**Como "executar":**
+
+1. Salve os arquivos alterados no seu computador (com o repositório devidamente clonado).
+2. Via terminal, adicione os arquivos modificados (nvda_server.py ou installer-a11y.py) ao Git, faça o commit e envie para o GitHub:
+```bash
+git add .
+git commit -m "Descrição da modificação realizada"
+git push origin main
+
+```
+
+**Como ver o resultado:**
+
+1. Acesse o repositório no site do GitHub.
+2. Clique na aba **"Actions"**.
+3. Lá estará o commit realizado. Clique nele.
+4. Na tela que surgir, será apresentado a **Matrix** funcionando! Haverá duas tarefas (jobs) rodando em paralelo: uma testando a escolha `1` e a outra testando a escolha `2`.
+5. Se você clicar em qualquer uma delas, poderá ver o terminal da máquina virtual do GitHub executando passo a passo, baixando o `SharpWin.exe`, compilando o instalador, simulando os "Enters" e validando se tudo foi parar nas pastas corretas.
+
 ## Quando o workflow é executado
 
 O workflow é acionado em:

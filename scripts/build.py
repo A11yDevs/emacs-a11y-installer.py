@@ -18,7 +18,7 @@ def main():
     # Compilar o nvda_server.py (na pasta src/)
     print("\n[2/4] Compilando nvda_server.py...")
     run_command([
-        sys.executable, "python-m", "PyInstaller",
+        sys.executable, "python", "-m", "PyInstaller",
         "--noconfirm",
         "--onefile",
         os.path.join("src", "nvda_server.py")

@@ -82,7 +82,7 @@ def main():
     
     servers = {
         "SharpWin (SAPI)": os.path.join(bin_dir, "SharpWin.exe"),
-        "NVDA Server": "nvda_server.exe" # Arquivo do NVDA Server presente no diretório raiz do projeto
+        "NVDA Server": os.path.join(bin_dir, "nvda_server.exe") # Arquivo do NVDA Server presente no diretório raiz do projeto
     }
     
     sucesso_total = True

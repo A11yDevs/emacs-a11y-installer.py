@@ -18,7 +18,7 @@ def main():
     # Compilar o nvda_server.py (na pasta src/)
     print("\n[2/4] Compilando nvda_server.py...")
     run_command([
-        sys.executable, "python", "-m", "PyInstaller",
+        sys.executable, "-m", "PyInstaller",
         "--noconfirm",
         "--onefile",
         os.path.join("src", "nvda_server.py")
@@ -42,7 +42,7 @@ def main():
     separator = ";" if os.name == "nt" else ":"
     
     run_command([
-        sys.executable, "python", "-m", "PyInstaller",
+        sys.executable, "-m", "PyInstaller",
         "--noconfirm",
         "--onefile",
         # Adiciona todos os binários da pasta 'bin' para a raiz ('.') do executável

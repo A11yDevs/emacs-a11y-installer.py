@@ -42,7 +42,7 @@ def main():
     separator = ";" if os.name == "nt" else ":"
     
     run_command([
-        sys.executable, "-m", "PyInstaller",
+        sys.executable, "python -m", "PyInstaller",
         "--noconfirm",
         "--onefile",
         # Adiciona todos os binários da pasta 'bin' para a raiz ('.') do executável

@@ -39,6 +39,8 @@ jobs:
 
       # Executa o script de build para gerar o instalador
       - name: Executar Script de Build
+        env:
+          PYTHONIOENCODING: utf8 # Força o console do Windows a ler acentos corretamente
         run: python scripts/build.py
 
       # Executa o script de benchmark para validar a estabilidade e latência dos binários
@@ -50,14 +52,14 @@ jobs:
       # Executa o instalador gerado com a escolha do usuário (1 ou 2)
       - name: Executar o Instalador (Opção ${{ matrix.user_choice }})
         env:
-          PYTHONIOENCODING: utf8 
+          PYTHONIOENCODING: utf8 # Força o console do Windows a ler acentos corretamente
         run: |
           # Simula a interação do usuário com o executável gerado na pasta dist/
           Write-Output "${{ matrix.user_choice }}`n`n" | .\dist\installer-a11y.exe
 
       - name: Validar Configuração
         env:
-          PYTHONIOENCODING: utf8 
+          PYTHONIOENCODING: utf8 # Força o console do Windows a ler acentos corretamente
         run: |
           $EmacsDir = "$env:USERPROFILE\.emacs.d"
           

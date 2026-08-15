@@ -1,10 +1,27 @@
 import ctypes
 import sys
 import os
-import platform
 
-def init_nvda():
-    # Verifica a arquitetura do processo atual
+class MockNVDADriver:
+    """
+    Driver simulado para absorver as chamadas de áudio durante o CI.
+    Ele possui a mesma assinatura de método que a DLL do NVDA espera.
+    """
+    def nvdaController_speakText(self, text):
+        # No modo mock, simplesmente consumimos a string sem fazer nada.
+        # Isso evita que o teste falhe devido à ausência do NVDA real.
+        pass
+
+def get_nvda_controller():
+    """
+    Módulo/Fábrica responsável por instanciar a comunicação com o leitor.
+    Retorna a conexão real no uso normal ou o Mock no ambiente de testes.
+    """
+    # Verifica se estamos no ambiente de automação (CI)
+    if os.environ.get("CI_MOCK_NVDA") == "1":
+        return MockNVDADriver()
+
+    # Lógica padrão de carregamento da DLL no Windows
     is_64bit = sys.maxsize > 2**32
     dll_name = "nvdaControllerClient64.dll" if is_64bit else "nvdaControllerClient32.dll"
 
@@ -20,6 +37,7 @@ def init_nvda():
     
     try:
         nvda = ctypes.windll.LoadLibrary(dll_path)
+        # Testa se o leitor físico está aberto no Windows
         if nvda.nvdaController_testIfRunning() != 0:
             return None
             
@@ -29,9 +47,11 @@ def init_nvda():
         return None
 
 def main():
-    nvda = init_nvda()
+    # A fábrica encapsula a complexidade. A main apenas usa o controlador recebido.
+    nvda = get_nvda_controller()
+    
     if not nvda:
-        sys.exit(1) # Encerra se o NVDA não estiver rodando
+        sys.exit(1) # Encerra graciosamente se o NVDA real não estiver rodando
 
     # Loop principal lendo a saída do Emacspeak
     while True:
@@ -43,6 +63,7 @@ def main():
             # Processa a linha recebida do Emacspeak
             if line.startswith("q "): 
                 texto = line[2:].strip()
+                # Chama a leitura na DLL (ou no Mock)
                 nvda.nvdaController_speakText(texto)
                 
         except KeyboardInterrupt:

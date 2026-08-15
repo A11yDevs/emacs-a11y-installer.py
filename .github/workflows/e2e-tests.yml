@@ -1,20 +1,18 @@
 name: Testes E2E - Instalador A11y
 
 on:
-  push: # Dispara o workflow em pushes para a branch "main".
+  push: # Dispara o workflow em push para a branch main
     branches: [ "main" ]
-  pull_request: # Dispara o workflow em pull requests para a branch "main".
+  pull_request: # Dispara o workflow em pull requests para a branch main
     branches: [ "main" ]
-  workflow_dispatch: # Permite que o workflow seja disparado manualmente na aba "Actions" do GitHub.
+  workflow_dispatch: # Permite disparar o workflow manualmente a partir da interface do GitHub
 
-# Definição do Job de Testes E2E
+# Definição de Jobs para o Workflow de Testes E2E
 jobs:
-  test-windows-installation:
-    runs-on: windows-latest
-    strategy:
-      matrix:
-        user_choice: [1, 2]
 
+  # Módulo de Benchmark de Performance
+  benchmark-performance:
+    runs-on: windows-latest
     steps:
       - name: Checkout do Repositório
         uses: actions/checkout@v4
@@ -24,8 +22,7 @@ jobs:
         with:
           python-version: '3.11'
 
-      # Instalação de dependências de build e preparação de dependências binárias
-      - name: Instalar Dependências de Build
+      - name: Instalar Dependências
         run: |
           python -m pip install --upgrade pip
           pip install pyinstaller rich psutil
@@ -36,28 +33,66 @@ jobs:
           $SharpWinUrl = "https://github.com/A11yDevs/emacs-a11y-installer.py/releases/download/deps-v1/SharpWin.exe"
           Invoke-WebRequest -Uri $SharpWinUrl -OutFile "bin\SharpWin.exe"
 
-      # Executa o Script de Build para gerar o instalador
-      - name: Executar Script de Build
+      - name: Compilar nvda_server
         env:
           PYTHONIOENCODING: utf8
         run: python scripts/build.py
 
-      # Executa Testes Unitários
-      - name: Executar Benchmark de Estresse e Latência
+      - name: Executar Benchmark (Comparação Direta)
         env:
           PYTHONIOENCODING: utf8
           CI_MOCK_NVDA: "1"
         run: python scripts/benchmark.py
 
-      # Executa o Instalador com a escolha do usuário (1 ou 2)
+  # Módulo de Teste de Instalação do Instalador A11y
+  test-windows-installation:
+    needs: benchmark-performance # Só roda a instalação se o benchmark for aprovado
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        user_choice: [1, 2]
+
+    steps:
+
+      # Verifica se o repositório foi clonado corretamente
+      - name: Checkout do Repositório
+        uses: actions/checkout@v4
+
+      # Configura o Python
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # Instala Dependências de Build
+      - name: Instalar Dependências de Build
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller rich
+
+      # Prepara Dependências Binárias
+      - name: Preparar Dependências Binárias
+        run: |
+          New-Item -ItemType Directory -Path "bin" -Force
+          $SharpWinUrl = "https://github.com/A11yDevs/emacs-a11y-installer.py/releases/download/deps-v1/SharpWin.exe"
+          Invoke-WebRequest -Uri $SharpWinUrl -OutFile "bin\SharpWin.exe"
+      
+      # Executa o Script de Build para gerar o instalador
+      - name: Executar Script de Build
+        env:
+          PYTHONIOENCODING: utf8
+        run: python scripts/build.py
+      
+      # Executa o Instalador com a Opção Escolhida pelo Usuário
       - name: Executar o Instalador (Opção ${{ matrix.user_choice }})
         env:
           PYTHONIOENCODING: utf8
         run: |
+          Write-Host "Simulando usuário escolhendo a Opção ${{ matrix.user_choice }}..." -ForegroundColor Cyan
           Write-Output "${{ matrix.user_choice }}`n`n" | .\dist\installer-a11y.exe
 
-      # Valida a instalação verificando a presença dos arquivos esperados
-      - name: Validar Configuração
+      # Valida a Configuração da Opção Escolhida
+      - name: Validar Configuração da Opção ${{ matrix.user_choice }}
         env:
           PYTHONIOENCODING: utf8
         run: |
@@ -67,12 +102,12 @@ jobs:
           if (-Not (Test-Path "$EmacsDir\emacspeak")) { exit 1 }
           
           if ("${{ matrix.user_choice }}" -eq "1") {
-              Write-Host "Validando arquivos da Configuração do Desenvolvedor..."
+              Write-Host "Validando arquivos específicos do Desenvolvedor (SharpWin)..."
               if (-Not (Test-Path "$EmacsDir\lisp\init-accessibility.el")) { exit 1 }
               if (-Not (Test-Path "$EmacsDir\SharpWin.exe")) { exit 1 }
           } 
           elseif ("${{ matrix.user_choice }}" -eq "2") {
-              Write-Host "Validando arquivos do Leitor de Telas Nativo..."
+              Write-Host "Validando arquivos específicos do NVDA..."
               if (-Not (Test-Path "$EmacsDir\nvda_server.exe")) { exit 1 }
               
               $Dll32 = Test-Path "$EmacsDir\nvdaControllerClient32.dll"

@@ -37,6 +37,29 @@ jobs:
           $SharpWinUrl = "https://github.com/A11yDevs/emacs-a11y-installer.py/releases/download/deps-v1/SharpWin.exe"
           Invoke-WebRequest -Uri $SharpWinUrl -OutFile "bin\SharpWin.exe"
 
+      # Instalar NVDA via Chocolatey para o teste do instalador com a opção 2 (Leitor de Telas Nativo)
+      - name: Instalar NVDA (Ambiente Real de Teste)
+        run: |
+          Write-Host "Instalando NVDA via Chocolatey..." -ForegroundColor Cyan
+          choco install nvda -y
+          
+      - name: Iniciar NVDA em Background
+        run: |
+          Write-Host "Iniciando o serviço do NVDA..." -ForegroundColor Cyan
+          # O caminho padrão de instalação do NVDA no Windows via choco
+          $NvdaPath = "C:\Program Files (x86)\NVDA\nvda.exe"
+          
+          if (Test-Path $NvdaPath) {
+              # Inicia o NVDA escondido
+              Start-Process -FilePath $NvdaPath -WindowStyle Hidden
+              # Aguarda 5 segundos para garantir que o servidor RPC do NVDA subiu completamente
+              Start-Sleep -Seconds 5
+              Write-Host "NVDA está rodando na máquina virtual!" -ForegroundColor Green
+          } else {
+              Write-Error "O executável do NVDA não foi encontrado após a instalação."
+              exit 1
+          }
+
       # Executa o script de build para gerar o instalador
       - name: Executar Script de Build
         env:

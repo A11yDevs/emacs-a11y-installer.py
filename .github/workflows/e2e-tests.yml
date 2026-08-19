@@ -22,22 +22,26 @@ jobs:
         with:
           python-version: '3.11'
 
+      # Instalar Dependências
       - name: Instalar Dependências
         run: |
           python -m pip install --upgrade pip
           pip install pyinstaller rich psutil
 
+      # Preparar Dependências Binárias
       - name: Preparar Dependências Binárias
         run: |
           New-Item -ItemType Directory -Path "bin" -Force
           $SharpWinUrl = "https://github.com/A11yDevs/emacs-a11y-installer.py/releases/download/deps-v1/SharpWin.exe"
           Invoke-WebRequest -Uri $SharpWinUrl -OutFile "bin\SharpWin.exe"
 
+      # Compilar o NVDA Server
       - name: Compilar nvda_server
         env:
           PYTHONIOENCODING: utf8
         run: python scripts/build.py
 
+      # Executar Benchmark (Comparação Direta)
       - name: Executar Benchmark (Comparação Direta)
         env:
           PYTHONIOENCODING: utf8
@@ -74,6 +78,7 @@ jobs:
       - name: Preparar Dependências Binárias
         run: |
           New-Item -ItemType Directory -Path "bin" -Force
+          # Baixa o SharpWin.exe necessário para a opção de Desenvolvedor
           $SharpWinUrl = "https://github.com/A11yDevs/emacs-a11y-installer.py/releases/download/deps-v1/SharpWin.exe"
           Invoke-WebRequest -Uri $SharpWinUrl -OutFile "bin\SharpWin.exe"
       
@@ -83,7 +88,7 @@ jobs:
           PYTHONIOENCODING: utf8
         run: python scripts/build.py
       
-      # Executa o Instalador com a Opção Escolhida pelo Usuário
+      # Executa o Instalador com a Opção escolhida pelo usuário
       - name: Executar o Instalador (Opção ${{ matrix.user_choice }})
         env:
           PYTHONIOENCODING: utf8
@@ -98,18 +103,24 @@ jobs:
         run: |
           $EmacsDir = "$env:USERPROFILE\.emacs.d"
           
+          # Validações base
           if (-Not (Test-Path "$EmacsDir\init.el")) { exit 1 }
           if (-Not (Test-Path "$EmacsDir\emacspeak")) { exit 1 }
+          if (-Not (Test-Path "$EmacsDir\lisp\init-accessibility.el")) { 
+              Write-Error "FALHA: O arquivo init-accessibility.el não foi injetado."
+              exit 1 
+          }
           
+          # Validações específicas de acordo com a escolha da matrix
           if ("${{ matrix.user_choice }}" -eq "1") {
               Write-Host "Validando arquivos específicos do Desenvolvedor (SharpWin)..."
-              if (-Not (Test-Path "$EmacsDir\lisp\init-accessibility.el")) { exit 1 }
               if (-Not (Test-Path "$EmacsDir\SharpWin.exe")) { exit 1 }
           } 
           elseif ("${{ matrix.user_choice }}" -eq "2") {
               Write-Host "Validando arquivos específicos do NVDA..."
               if (-Not (Test-Path "$EmacsDir\nvda_server.exe")) { exit 1 }
               
+              # Valida se pelo menos uma das DLLs do NVDA Controller Client está presente
               $Dll32 = Test-Path "$EmacsDir\nvdaControllerClient32.dll"
               $Dll64 = Test-Path "$EmacsDir\nvdaControllerClient64.dll"
               if (-Not ($Dll32 -or $Dll64)) { exit 1 }

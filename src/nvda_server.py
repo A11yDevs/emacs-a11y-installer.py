@@ -2,16 +2,21 @@ import ctypes
 import sys
 import os
 
+# Mock do NVDA Controller para testes de integração contínua (CI)
 class MockNVDADriver:
     """
     Driver simulado para absorver as chamadas de áudio durante o CI.
-    Ele possui a mesma assinatura de método que a DLL do NVDA espera.
+    Ele possui a mesma assinatura de métodos que a DLL do NVDA espera.
     """
     def nvdaController_speakText(self, text):
-        # No modo mock, simplesmente consumimos a string sem fazer nada.
-        # Isso evita que o teste falhe devido à ausência do NVDA real.
+        # Absorve o comando de fala silenciosamente no ambiente de testes
         pass
 
+    def nvdaController_cancelSpeech(self):
+        # Absorve o comando de parada de fala (Silence/Stop) silenciosamente no ambiente de testes
+        pass
+
+# Função para obter a instância do NVDA Controller, seja real ou mock
 def get_nvda_controller():
     """
     Módulo/Fábrica responsável por instanciar a comunicação com o leitor.
@@ -21,7 +26,7 @@ def get_nvda_controller():
     if os.environ.get("CI_MOCK_NVDA") == "1":
         return MockNVDADriver()
 
-    # Lógica padrão de carregamento da DLL no Windows
+    # Lógica padrão de carregamento da DLL Real
     is_64bit = sys.maxsize > 2**32
     dll_name = "nvdaControllerClient64.dll" if is_64bit else "nvdaControllerClient32.dll"
 
@@ -42,29 +47,36 @@ def get_nvda_controller():
             return None
             
         nvda.nvdaController_speakText.argtypes = [ctypes.c_wchar_p]
+        # Define o tipo de retorno do método cancelSpeech como void (sem retorno)
         return nvda
     except Exception:
         return None
 
 def main():
-    # A fábrica encapsula a complexidade. A main apenas usa o controlador recebido.
+    # A fábrica entrega a DLL conectada ou o Mock, de acordo com o ambiente
     nvda = get_nvda_controller()
     
     if not nvda:
-        sys.exit(1) # Encerra graciosamente se o NVDA real não estiver rodando
+        sys.exit(1) # Encerra se o NVDA real não estiver rodando
 
-    # Loop principal lendo a saída do Emacspeak
+    # Loop principal lendo a saída do Emacspeak via stdin
     while True:
         try:
             line = sys.stdin.readline()
             if not line:
                 break
+            
+            # Limpa quebras de linha e espaços excedentes da string recebida
+            line_clean = line.strip()
                 
-            # Processa a linha recebida do Emacspeak
-            if line.startswith("q "): 
-                texto = line[2:].strip()
-                # Chama a leitura na DLL (ou no Mock)
+            # Processa a linha recebida do Emacspeak (Comando de Fala)
+            if line_clean.startswith("q "): 
+                texto = line_clean[2:].strip()
                 nvda.nvdaController_speakText(texto)
+                
+            # Intercepta o comando de interrupção de fala
+            elif line_clean == "s":
+                nvda.nvdaController_cancelSpeech()
                 
         except KeyboardInterrupt:
             break

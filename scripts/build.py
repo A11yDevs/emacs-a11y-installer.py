@@ -3,6 +3,7 @@ import subprocess
 import shutil
 import sys
 
+# Função auxiliar para executar comandos do sistema
 def run_command(cmd):
     print(f"Executando: {' '.join(cmd)}")
     subprocess.run(cmd, check=True)
@@ -15,7 +16,7 @@ def main():
     shutil.rmtree("build", ignore_errors=True)
     shutil.rmtree("dist", ignore_errors=True)
 
-    # Compilar o nvda_server.py (na pasta src/)
+    # Compilar o nvda_server.py
     print("\n[2/4] Compilando nvda_server.py...")
     run_command([
         sys.executable, "-m", "PyInstaller",
@@ -24,8 +25,7 @@ def main():
         os.path.join("src", "nvda_server.py")
     ])
 
-    # Move o nvda_server.exe gerado para a pasta bin/
-    # Isso organiza todas as dependências em um lugar só antes do empacotamento final
+    # Prepara e copia os binários necessários
     print("\n[3/4] Preparando dependências na pasta bin/...")
     if os.path.exists(os.path.join("dist", "nvda_server.exe")):
         os.makedirs("bin", exist_ok=True)
@@ -35,21 +35,27 @@ def main():
         print("Erro: nvda_server.exe não foi gerado.")
         sys.exit(1)
 
-    # Compila o instalador principal apontando para os arquivos na pasta bin/
+    # Compila o instalador principal apontando para os arquivos binários e de dados necessários
     print("\n[4/4] Compilando installer-a11y.py...")
     
-    # O separador do PyInstaller para --add-binary é ';' no Windows e ':' no Linux
+    # Define o separador de caminho correto para o sistema operacional
     separator = ";" if os.name == "nt" else ":"
     
     run_command([
         sys.executable, "-m", "PyInstaller",
         "--noconfirm",
         "--onefile",
-        # Adiciona todos os binários da pasta 'bin' para a raiz ('.') do executável
+        # Adiciona todos os binários para a raiz do executável
         f"--add-binary=bin/nvda_server.exe{separator}.",
         f"--add-binary=bin/nvdaControllerClient64.dll{separator}.",
         f"--add-binary=bin/nvdaControllerClient32.dll{separator}.",
         f"--add-binary=bin/SharpWin.exe{separator}.",
+        
+        # Adiciona os arquivos Lisp separados para a raiz executável
+        f"--add-data=src/init-a11y-win-dev.el{separator}.",
+        f"--add-data=src/init-a11y-win-native.el{separator}.",
+        f"--add-data=src/init-a11y-linux-native.el{separator}.",
+        
         os.path.join("src", "installer-a11y.py")
     ])
 

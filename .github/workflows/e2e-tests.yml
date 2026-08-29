@@ -88,13 +88,15 @@ jobs:
           PYTHONIOENCODING: utf8
         run: python scripts/build.py
       
-      # Executa o Instalador com a Opção escolhida pelo usuário
+      # Executa o Instalador via Variável de Ambiente
       - name: Executar o Instalador (Opção ${{ matrix.user_choice }})
         env:
           PYTHONIOENCODING: utf8
+          CI_AUTO_INSTALL: "${{ matrix.user_choice }}" # Passa '1' ou '2' direto pro Python
+          CI_MOCK_NVDA: "1" # Pula a checagem do NVDA físico
         run: |
-          Write-Host "Simulando usuário escolhendo a Opção ${{ matrix.user_choice }}..." -ForegroundColor Cyan
-          Write-Output "${{ matrix.user_choice }}`n`n" | .\dist\installer-a11y.exe
+          Write-Host "Iniciando instalador A11yDevs sem interface gráfica..." -ForegroundColor Cyan
+          .\dist\installer-a11y.exe
 
       # Valida a Configuração da Opção Escolhida
       - name: Validar Configuração da Opção ${{ matrix.user_choice }}

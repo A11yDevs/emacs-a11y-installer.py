@@ -2,7 +2,6 @@ import ctypes
 import sys
 import os
 
-# Mock do NVDA Controller para testes de integração contínua (CI)
 class MockNVDADriver:
     """
     Driver simulado para absorver as chamadas de áudio durante o CI.
@@ -16,7 +15,6 @@ class MockNVDADriver:
         # Absorve o comando de parada de fala (Silence/Stop) silenciosamente no ambiente de testes
         pass
 
-# Função para obter a instância do NVDA Controller, seja real ou mock
 def get_nvda_controller():
     """
     Módulo/Fábrica responsável por instanciar a comunicação com o leitor.
@@ -42,12 +40,11 @@ def get_nvda_controller():
     
     try:
         nvda = ctypes.windll.LoadLibrary(dll_path)
-        # Testa se o leitor físico está aberto no Windows
         if nvda.nvdaController_testIfRunning() != 0:
             return None
             
         nvda.nvdaController_speakText.argtypes = [ctypes.c_wchar_p]
-        # Define o tipo de retorno do método cancelSpeech como void (sem retorno)
+        # A função cancelSpeech não exige argumentos, então não precisamos definir argtypes
         return nvda
     except Exception:
         return None
@@ -59,7 +56,7 @@ def main():
     if not nvda:
         sys.exit(1) # Encerra se o NVDA real não estiver rodando
 
-    # Loop principal lendo a saída do Emacspeak via stdin
+    # Loop principal lendo a saída do Emacspeak
     while True:
         try:
             line = sys.stdin.readline()
@@ -69,18 +66,17 @@ def main():
             # Limpa quebras de linha e espaços excedentes da string recebida
             line_clean = line.strip()
                 
-            # Processa a linha recebida do Emacspeak (Comando de Fala)
+            # Processa a linha recebida do Emacspeak
             if line_clean.startswith("q "): 
                 texto = line_clean[2:].strip()
                 nvda.nvdaController_speakText(texto)
                 
-            # Intercepta o comando de interrupção de fala
+            # Intercepta o comando de interrupção de fala (Silence/Stop)
             elif line_clean == "s":
                 nvda.nvdaController_cancelSpeech()
                 
         except KeyboardInterrupt:
             break
 
-# Ponto de entrada do script
 if __name__ == "__main__":
     main()

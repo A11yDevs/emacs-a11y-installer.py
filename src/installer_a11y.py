@@ -39,14 +39,11 @@ class BaseInstaller:
         os.makedirs(lisp_dir, exist_ok=True)
         dest_file = os.path.join(lisp_dir, "init-accessibility.el")
         
-        # Define qual módulo de acessibilidade será utilizado.
-        if os_name == "Windows" and not use_native:
-            source_name = "init-a11y-win-dev.el" # Para Windows (Desenvolvedor).
-        elif os_name == "Windows" and use_native: # Para Windows (NVDA).
-            source_name = "init-a11y-win-native.el"
-        else:
-            # Para Linux (eSpeak NG).
-            source_name = "init-a11y-linux-native.el"
+        # Define qual módulo de acessibilidade será utilizado de forma explícita.
+        if os_name == "Windows":
+            source_name = "init-a11y-win-native.el" if use_native else "init-a11y-win-dev.el"
+        elif os_name == "Linux":
+            source_name = "init-a11y-linux-native.el" if use_native else "init-a11y-linux-dev.el"
             
         base_path = sys._MEIPASS if hasattr(sys, '_MEIPASS') else os.path.abspath(".")
         source_path = os.path.join(base_path, source_name)

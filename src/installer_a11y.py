@@ -235,8 +235,8 @@ class WindowsInstaller(BaseInstaller):
         if use_native:
             is_64bit = platform.architecture()[0] == '64bit'
             dll_name = "nvdaControllerClient64.dll" if is_64bit else "nvdaControllerClient32.dll"
-            files_to_copy = ["nvda_server.exe", dll_name]
-            server_executable = "nvda_server.exe"
+            files_to_copy = ["connect_a11y.exe", dll_name]
+            server_executable = "connect_a11y.exe"
         else:
 
             # Carregamento do servidor de voz para as configurações de desenvolvedor.

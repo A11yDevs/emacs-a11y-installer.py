@@ -170,7 +170,7 @@ def print_comparison(results):
 # Função principal para executar o benchmark
 def main():
     bin_dir = "bin"
-    nvda_path = os.path.join(bin_dir, "nvda_server.exe") if os.path.exists(os.path.join(bin_dir, "nvda_server.exe")) else "nvda_server.exe"
+    nvda_path = os.path.join(bin_dir, "connect_a11y.exe") if os.path.exists(os.path.join(bin_dir, "connect_a11y.exe")) else "connect_a11y.exe"
 
     servers = {
         "SharpWin (SAPI)": os.path.join(bin_dir, "SharpWin.exe"),

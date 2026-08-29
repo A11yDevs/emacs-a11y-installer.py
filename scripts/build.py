@@ -16,27 +16,27 @@ def main():
     shutil.rmtree("build", ignore_errors=True)
     shutil.rmtree("dist", ignore_errors=True)
 
-    # Compilar o nvda_server.py
-    print("\n[2/4] Compilando nvda_server.py...")
+    # Compilar o connect_a11y.py
+    print("\n[2/4] Compilando connect_a11y.py...")
     run_command([
         sys.executable, "-m", "PyInstaller",
         "--noconfirm",
         "--onefile",
-        os.path.join("src", "nvda_server.py")
+        os.path.join("src", "connect_a11y.py")
     ])
 
     # Prepara e copia os binários necessários
     print("\n[3/4] Preparando dependências na pasta bin/...")
-    if os.path.exists(os.path.join("dist", "nvda_server.exe")):
+    if os.path.exists(os.path.join("dist", "connect_a11y.exe")):
         os.makedirs("bin", exist_ok=True)
-        shutil.copy(os.path.join("dist", "nvda_server.exe"), "bin")
-        print("nvda_server.exe copiado para a pasta bin/.")
+        shutil.copy(os.path.join("dist", "connect_a11y.exe"), "bin")
+        print("connect_a11y.exe copiado para a pasta bin/.")
     else:
-        print("Erro: nvda_server.exe não foi gerado.")
+        print("Erro: connect_a11y.exe não foi gerado.")
         sys.exit(1)
 
     # Compila o instalador principal apontando para os arquivos binários e de dados necessários
-    print("\n[4/4] Compilando installer-a11y.py...")
+    print("\n[4/4] Compilando installer_a11y.py...")
     
     # Define o separador de caminho correto para o sistema operacional
     separator = ";" if os.name == "nt" else ":"
@@ -46,7 +46,7 @@ def main():
         "--noconfirm",
         "--onefile",
         # Adiciona todos os binários para a raiz do executável
-        f"--add-binary=bin/nvda_server.exe{separator}.",
+        f"--add-binary=bin/connect_a11y.exe{separator}.",
         f"--add-binary=bin/nvdaControllerClient64.dll{separator}.",
         f"--add-binary=bin/nvdaControllerClient32.dll{separator}.",
         f"--add-binary=bin/SharpWin.exe{separator}.",
@@ -54,13 +54,14 @@ def main():
         # Adiciona os arquivos Lisp separados para a raiz executável
         f"--add-data=src/init-a11y-win-dev.el{separator}.",
         f"--add-data=src/init-a11y-win-native.el{separator}.",
+        f"--add-data=src/init-a11y-linux-dev.el{separator}.",
         f"--add-data=src/init-a11y-linux-native.el{separator}.",
         
-        os.path.join("src", "installer-a11y.py")
+        os.path.join("src", "installer_a11y.py")
     ])
 
     print("\n=== Build concluído com sucesso! ===")
-    print("O executável final 'installer-a11y.exe' está na pasta 'dist/'.")
+    print("O executável final 'installer_a11y.exe' está na pasta 'dist/'.")
 
 if __name__ == '__main__':
     main()

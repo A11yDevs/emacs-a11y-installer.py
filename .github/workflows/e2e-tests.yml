@@ -36,7 +36,7 @@ jobs:
           Invoke-WebRequest -Uri $SharpWinUrl -OutFile "bin\SharpWin.exe"
 
       # Compilar o NVDA Server
-      - name: Compilar nvda_server
+      - name: Compilar connect_a11y
         env:
           PYTHONIOENCODING: utf8
         run: python scripts/build.py
@@ -96,7 +96,7 @@ jobs:
           CI_MOCK_NVDA: "1" # Pula a checagem do NVDA físico
         run: |
           Write-Host "Iniciando instalador A11yDevs sem interface gráfica..." -ForegroundColor Cyan
-          .\dist\installer-a11y.exe
+          .\dist\installer_a11y.exe
 
       # Valida a Configuração da Opção Escolhida
       - name: Validar Configuração da Opção ${{ matrix.user_choice }}
@@ -120,7 +120,7 @@ jobs:
           } 
           elseif ("${{ matrix.user_choice }}" -eq "2") {
               Write-Host "Validando arquivos específicos do NVDA..."
-              if (-Not (Test-Path "$EmacsDir\nvda_server.exe")) { exit 1 }
+              if (-Not (Test-Path "$EmacsDir\connect_a11y.exe")) { exit 1 }
               
               # Valida se pelo menos uma das DLLs do NVDA Controller Client está presente
               $Dll32 = Test-Path "$EmacsDir\nvdaControllerClient32.dll"

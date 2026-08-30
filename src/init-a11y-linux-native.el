@@ -26,8 +26,7 @@
         (and name (string-match-p "speaker\\|dtk\\|tts\\|espeak" name))
         (and buf
              (buffer-live-p buf)
-             (string-match-p "speaker\\|dtk\\|tts\\|espeak"
-                             (buffer-name buf))))))
+             (string-match-p "speaker\\|dtk\\|tts\\|espeak" (buffer-name buf))))))
 
 (defun my/emacspeak-disable-exit-query ()
   (dolist (proc (process-list))
@@ -40,8 +39,7 @@
   (dolist (proc (process-list))
     (when (and (process-live-p proc)
                (my/emacspeak-process-p proc))
-      (ignore-errors
-        (delete-process proc)))))
+      (ignore-errors (delete-process proc)))))
 
 ;; --- Configuração de Idioma ---
 (defun my/emacspeak-apply-language ()
@@ -58,36 +56,25 @@
 
 (add-hook 'kill-emacs-hook #'my/emacspeak-cleanup)
 
-;; --- Alternância Dinâmica de Idiomas (Atalho) ---
+;; --- Alternância Dinâmica de Idiomas ---
 (defvar my/emacspeak-current-language "pt-br"
   "Idioma atual do Emacspeak.")
 
 (defun my/emacspeak-toggle-language ()
   "Alterna rapidamente entre português e inglês adequando ao eSpeak."
   (interactive)
-  (when (fboundp 'dtk-stop)
-    (dtk-stop))
+  (when (fboundp 'dtk-stop) (dtk-stop))
   
   (if (string= my/emacspeak-current-language "pt-br")
       (progn
         (ignore-errors (dtk-set-language "en"))
         (ignore-errors (dtk-set-voice "en"))
         (setq my/emacspeak-current-language "en")
-        (run-with-timer
-         0.2 nil
-         (lambda ()
-           (when (fboundp 'dtk-speak)
-             (dtk-speak "English mode")))))
+        (run-with-timer 0.2 nil (lambda () (when (fboundp 'dtk-speak) (dtk-speak "English mode")))))
     (progn
       (ignore-errors (dtk-set-language "pt-br"))
       (ignore-errors (dtk-set-voice "pt"))
       (setq my/emacspeak-current-language "pt-br")
-      (run-with-timer
-       0.2 nil
-       (lambda ()
-         (when (fboundp 'dtk-speak)
-           (dtk-speak "Modo português")))))))
-
-(global-set-key (kbd "C-c t") #'my/emacspeak-toggle-language)
+      (run-with-timer 0.2 nil (lambda () (when (fboundp 'dtk-speak) (dtk-speak "Modo português")))))))
 
 (provide 'init-accessibility)

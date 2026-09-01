@@ -1,43 +1,44 @@
-
-
-### Executável Python destinado a automatizar a instalação e a configuração básica de um ambiente acessível baseado em **GNU Emacs + Emacspeak**, com suporte a diferentes servidores de voz.
+# Executável Python destinado a automatizar a instalação e a configuração básica de um ambiente acessível baseado em **GNU Emacs + Emacspeak**, com suporte a diferentes servidores de voz.
 
 ## Visão geral
 
 O projeto fornece um instalador que identifica o sistema operacional, instala dependências, obtém e configura o Emacspeak e cria os arquivos de configuração necessários para iniciar o ambiente audível.
 
-O fluxo principal está concentrado em `scr/installer-a11y.py`. O programa apresenta duas opções de configuração:
+O fluxo principal está concentrado em `src/installer_a11y.py`. O programa apresenta duas opções de configuração:
 
 1. **Configuração do Desenvolvedor**
    - Windows: utiliza `SharpWin.exe` como servidor de voz.
    - Gera `~/.emacs.d/lisp/init-accessibility.el`.
    - Configura voz, idioma, limpeza de processos do Emacspeak e alternância entre português e inglês.
 2. **Leitor de Telas Nativo**
-   - Windows: utiliza `nvda_server.exe` e a DLL correspondente do NVDA Controller Client.
+   - Windows: utiliza `connect_a11y.exe` e a DLL correspondente do NVDA Controller Client.
    - Linux: utiliza o servidor nativo do Emacspeak com eSpeak NG.
 
-A escolha é feita pelo usuário no início da execução e determina o restante do processo.
+A escolha é feita pelo usuário no início da execução (através de uma interface gráfica Tkinter) e determina o restante do processo, que roda em uma thread secundária.
 
 ## Fluxo de execução
 
 ```text
 Início
   │
-  ├─ Exibe as opções 1 e 2
+  ├─ Exibe a Interface Gráfica (Tkinter) com opções 1 e 2
   │
-  ├─ Recebe a escolha
+  ├─ Recebe a escolha e inicia rotina em background (Thread)
   │
   ├─ Detecta o sistema operacional
   │    ├─ Windows → WindowsInstaller
   │    └─ Linux   → LinuxInstaller
   │
-  ├─ Instala dependências
+  ├─ Instala dependências (via winget, choco ou apt-get)
   │
-  ├─ Configura o Emacspeak
+  ├─ Configura o Emacspeak (Clona repositório e compila se necessário)
+  │
+  ├─ Injeta ~/.emacs.d/lisp/init-accessibility.el
   │
   ├─ Cria ~/.emacs.d/init.el
   │
-  └─ Finaliza informando que o ambiente está pronto
+  └─ Finaliza informando via Interface que o ambiente está pronto
+
 ```
 
 O código rejeita sistemas operacionais diferentes de Windows e Linux. No Linux, a implementação exige uma distribuição baseada em Debian ou Ubuntu, pois verifica a existência de `apt-get`.
@@ -48,86 +49,105 @@ O código rejeita sistemas operacionais diferentes de Windows e Linux. No Linux,
 emacs-a11y-installer.py/
 ├── .github/
 │   └── workflows/
-│       ├── README.md
+│       ├── README_github_workflows.md
 │       └── e2e-tests.yml
 ├── bin/
-├── scr/
-│   ├── README.md
-│   ├── installer-a11y.py
-│   └── nvda_server.py
+├── src/
+│   ├── README_src.md
+│   ├── installer_a11y.py
+│   ├── interface_a11y.py
+│   ├── connect_a11y.py
+│   ├── init-a11y-windows-native.el
+│   ├── init-a11y-windows-dev.el
+│   ├── init-a11y-linux-native.el
+│   └── init-a11y-linux-dev.el
 ├── scripts/
-│   ├── README.md
-│   └── build.yml
+│   ├── README_scripts.md
+│   ├── build.py
+│   └── benchmark.py
 ├── .gitattributes
 ├── .gitignore
 ├── LICENSE
 └── README.md
+
 ```
 
 ## Componentes principais
 
-### `scr/installer-a11y.py`
+### `src/installer_a11y.py`
 
-É o núcleo do instalador.
+É o controlador principal (Orquestrador) do instalador.
 
 O arquivo contém:
 
-- `BaseInstaller`: funções comuns de execução de comandos e geração de configurações.
-- `WindowsInstaller`: instalação das dependências do Windows e configuração do Emacspeak.
-- `LinuxInstaller`: instalação das dependências Debian/Ubuntu e compilação do servidor nativo do Emacspeak.
-- `get_installer()`: seleção da implementação adequada ao sistema operacional.
-- bloco `if __name__ == "__main__"`: fluxo interativo principal.
+* `BaseInstaller`: funções comuns de execução de comandos (subprocessos ocultos) e geração de configurações.
+* `WindowsInstaller`: instalação das dependências do Windows e configuração do Emacspeak.
+* `LinuxInstaller`: instalação das dependências Debian/Ubuntu e compilação do servidor nativo do Emacspeak.
+* `processo_background()`: função que isola a execução da instalação em uma Thread.
+* bloco `if __name__ == "__main__"`: fluxo inicial que suporta tanto interface interativa Tkinter quanto modo de testes autônomo (Headless).
 
-### `scr/nvda_server.py`
+### `src/interface_a11y.py`
 
-Implementa um pequeno servidor que conecta o Emacspeak ao NVDA no Windows.
+Camada de apresentação desenvolvida em `tkinter`.
+A interface impede travamentos visuais, expondo botões de acessibilidade imediata e uma caixa de texto segura (`scrolledtext`) atualizada assincronamente a partir da thread principal.
+
+### `src/connect_a11y.py`
+
+Implementa um *middleware* IPC que conecta o Emacspeak ao NVDA no Windows de forma nativa e de baixa latência.
 
 O programa:
 
-1. Detecta se o processo Python é de 32 ou 64 bits.
-2. Seleciona `nvdaControllerClient32.dll` ou `nvdaControllerClient64.dll`.
-3. Carrega a DLL dinamicamente com `ctypes`.
-4. Verifica se o NVDA está em execução.
-5. Lê a entrada recebida em `stdin`.
-6. Para linhas iniciadas por `q `, envia o texto ao NVDA para síntese de fala.
+1. Detecta o ambiente, e se acionado pelo GitHub Actions (`CI_MOCK_NVDA=1`), usa o `MockNVDADriver` silencioso.
+2. Em uso real, seleciona `nvdaControllerClient32.dll` ou `nvdaControllerClient64.dll` baseado na arquitetura (`sys.maxsize > 2**32`).
+3. Carrega a DLL dinamicamente com `ctypes.windll.LoadLibrary`.
+4. Verifica se o NVDA está em execução fisicamente.
+5. Em loop, lê a entrada recebida em `stdin`.
+6. Repassa falas ou cancela falas chamando métodos diretos em C++.
+
+### `src/init-a11y-*.el`
+
+Cargas úteis em Lisp. São arquivos específicos de injeção que determinam como o Emacs deve se comportar perante as vozes, taxas de áudio, limpezas de zumbis de processos IPC (usando `process-query-on-exit-flag`) e alternâncias entre os idiomas. O Emacs atende ao suporte para aplicações textuais, execução de comandos e projetos baseados em ferramentas mecatrônicas.
 
 ## Configuração do Windows
 
 No Windows, o instalador verifica primeiro a existência de `winget`. Caso ele esteja disponível, utiliza-o para instalar:
 
-- Git;
-- GNU Emacs.
+* Git;
+* GNU Emacs.
 
-Se `winget` não estiver disponível, tenta utilizar Chocolatey. Caso nenhum dos dois esteja disponível, o instalador tenta instalar o Chocolatey e, em seguida, instala as dependências.
+Se `winget` não estiver disponível, tenta utilizar Chocolatey. Caso nenhum dos dois esteja disponível, o instalador tenta instalar o Chocolatey silenciosamente via PowerShell e, em seguida, instala as dependências.
 
 Depois disso, o instalador obtém o repositório do Emacspeak em:
 
 ```text
 ~/.emacs.d/emacspeak
+
 ```
 
 Na configuração do desenvolvedor, o executável `SharpWin.exe` é copiado para:
 
 ```text
 ~/.emacs.d/SharpWin.exe
+
 ```
 
 Na configuração nativa, são utilizados:
 
 ```text
-~/.emacs.d/nvda_server.exe
+~/.emacs.d/connect_a11y.exe
 ~/.emacs.d/nvdaControllerClient32.dll
 ou
 ~/.emacs.d/nvdaControllerClient64.dll
+
 ```
 
-O arquivo final `init.el` configura o servidor de voz e carrega o Emacspeak.
+O arquivo final `init.el` é criado e o payload selecionado em `init-a11y-*.el` é injetado como `init-accessibility.el`.
 
 ## Configuração do Linux
 
 O suporte Linux atualmente é direcionado a sistemas Debian/Ubuntu.
 
-O instalador utiliza `apt-get` para instalar:
+O instalador utiliza `apt-get` silenciosamente para instalar:
 
 ```text
 emacs
@@ -137,41 +157,44 @@ tclx
 espeak-ng
 make
 g++
+
 ```
 
 Depois clona o Emacspeak, executa:
 
 ```bash
 make config
+
 ```
 
 e compila o servidor:
 
 ```text
 ~/.emacs.d/emacspeak/servers/native-espeak
+
 ```
 
-Por fim, gera o `init.el` com `espeak` como servidor de voz.
+Por fim, copia o payload `.el` correspondente (Dev ou Nativo) e gera o `init.el` com `espeak` como servidor de voz.
 
 ## Geração de `emacspeak-loaddefs.el`
 
-Quando o Emacspeak é clonado no Windows, o instalador tenta localizar o GNU Emacs no `PATH` ou em caminhos comuns de instalação.
+Quando o Emacspeak é clonado no Windows, o instalador tenta localizar o GNU Emacs no sistema.
 
 Em seguida, cria temporariamente:
 
 ```text
 build-loaddefs.el
+
 ```
 
 Esse script Lisp é executado pelo Emacs em modo batch para gerar:
 
 ```text
 lisp/emacspeak-loaddefs.el
+
 ```
 
-Depois da geração, o arquivo temporário `build-loaddefs.el` é removido.
-
-Esse procedimento permite que o próprio Emacs gere o mapa de autoloads do Emacspeak, em vez de depender de um arquivo previamente preparado.
+Depois da geração, o arquivo temporário é removido. Isso permite que o próprio Emacs construa as referências corretas.
 
 ## Arquivos gerados
 
@@ -182,75 +205,53 @@ Ao final da instalação, a estrutura principal esperada em `~/.emacs.d` é seme
 ├── init.el
 ├── emacspeak/
 ├── lisp/
-│   └── init-accessibility.el   # somente na configuração do desenvolvedor
-├── SharpWin.exe                # Windows + configuração do desenvolvedor
-├── nvda_server.exe             # Windows + configuração nativa
-└── nvdaControllerClient*.dll   # Windows + configuração nativa
+│   └── init-accessibility.el    # O arquivo Lisp injetado de acordo com a opção escolhida
+├── SharpWin.exe                 # Windows + configuração do desenvolvedor
+├── connect_a11y.exe             # Windows + configuração nativa
+└── nvdaControllerClient*.dll    # Windows + configuração nativa
+
 ```
 
-## Configuração de acessibilidade do desenvolvedor
+## Configurações de Acessibilidade (Arquivos Lisp)
 
-Quando a opção 1 é selecionada, `init-accessibility.el` configura, entre outros pontos:
+O instalador insere `init-accessibility.el` que padroniza o ambiente, ajustando (variando entre ambientes):
 
-- desativação de ícones auditivos do Emacspeak;
-- eco de linha;
-- atraso de eco de teclas;
-- desativação do beep tradicional;
-- anúncio após salvar arquivos;
-- limpeza de processos relacionados ao Emacspeak ao fechar o Emacs;
-- voz `Microsoft Maria Desktop` para português do Brasil;
-- voz `Microsoft Zira Desktop` para inglês;
-- taxa de fala configurada em 180;
-- alternância de idioma através de `C-c t`.
+* desativação de ícones auditivos do Emacspeak;
+* eco de linha e atraso (0.1) de eco de teclas;
+* desativação do beep visual (`ring-bell-function`);
+* hooks como anúncio de "Arquivo salvo" após ações.
+* `my/emacspeak-cleanup` (Limpeza de processos zumbis ao fechar).
+* Vozes: Configuração do SAPI (`Microsoft Maria/Zira`) para Windows Dev, ou chamadas diretas ao `eSpeak` para Linux/Nativo.
+* Alternância de idioma instantânea no atalho `C-c t`.
 
 ## Tratamento de erros
 
-Os comandos externos são executados por meio de `subprocess.run(..., check=True, ...)`.
+Os comandos externos são executados ocultamente. Quando uma etapa falha, o instalador:
 
-Quando uma etapa falha, o instalador:
+1. aborta e captura a exceção (`subprocess.CalledProcessError`);
+2. sinaliza o erro via método assíncripto `app_gui.finalizar_erro()` para a GUI Tkinter, garantindo legibilidade ao leitor de telas.
+3. permite retomada caso o usuário queira.
 
-1. mostra uma mensagem de erro;
-2. exibe a saída retornada pelo comando quando disponível;
-3. encerra o processo com código de erro.
+## Testes de implementação (scripts)
 
-No clone do Emacspeak, existe ainda um mecanismo de limpeza do diretório incompleto caso a operação falhe.
+Além do núcleo, existem automações para engenharia de release:
 
-## Execução
+* **`scripts/build.py`**: Empacota estaticamente o programa (`PyInstaller`), integrando as dependências `DLL`, os executáveis auxiliares C# e os scripts `Lisp`, para gerar um único `installer_a11y.exe`.
+* **`scripts/benchmark.py`**: Script de *profiling*. Envia fuzzings pesados nos buffers dos executáveis IPC do projeto, disparando milhares de requisições de áudio e coletando métricas sistêmicas de CPU, Pico de RAM e Latência (ms) via `psutil`.
 
-O código-fonte pode ser executado diretamente com Python:
+## Integração contínua (CI)
 
-```bash
-python scr/installer-a11y.py
-```
-
-Para gerar um executável Windows, o fluxo de CI chama:
-
-```powershell
-python scripts/build.py
-```
-
-e espera encontrar:
-
-```text
-dist/installer-a11y.exe
-```
-
-## Integração contínua
-
-O projeto possui um workflow de testes E2E em:
+O projeto possui um workflow robusto e integrado de testes em:
 
 ```text
 .github/workflows/e2e-tests.yml
+
 ```
 
-Esse workflow:
+Esse workflow independente:
 
-- roda em `windows-latest`;
-- utiliza Python 3.11;
-- instala `pyinstaller` e `rich`;
-- baixa `SharpWin.exe` de uma release;
-- executa `scripts/build.py`;
-- executa o instalador gerado;
-- testa as duas escolhas de configuração;
-- valida os arquivos criados em `~/.emacs.d`.
-
+* roda em `windows-latest` usando Python 3.11;
+* afere o impacto na memória (Benchmark comparativo) com telemetria avançada;
+* compila estaticamente (Build Pipeline);
+* testa automaticamente a instalação injetando as varíaveis `CI_AUTO_INSTALL` e o Mock de áudio `CI_MOCK_NVDA`;
+* audita diretamente as partições via `PowerShell` validando que todos os binários foram injetados perfeitamente nas duas estratégias de matrizes ("Desenvolvedor" e "Nativo").

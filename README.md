@@ -1,4 +1,4 @@
-# Executável Python destinado a automatizar a instalação e a configuração básica de um ambiente acessível baseado em **GNU Emacs + Emacspeak**, com suporte a diferentes servidores de voz.
+# Executável Python destinado a automatizar a instalação e a configuração básica de um ambiente acessível baseado em **GNU Emacs + Emacspeak**.
 
 ## Visão geral
 

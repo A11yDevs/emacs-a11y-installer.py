@@ -179,10 +179,21 @@ class WindowsInstaller(BaseInstaller):
             except Exception:
                 pass
                 
+        # Instalação automatizada caso o NVDA não seja encontrado e o usuário confirme o ambiente nativo.        
         if not has_nvda:
-            raise Exception("NVDA não detectado no sistema!\n\nA configuração 'Leitor de Telas Nativo' requer que o NVDA esteja instalado fisicamente ou em execução.\nPor favor, instale o NVDA ou escolha a Configuração do Desenvolvedor (Opção 1).")
-            
-        self.log("[green]Pré-requisito confirmado: NVDA detectado com sucesso.[/green]")
+            self.log("[yellow]NVDA não detectado. Como o ambiente nativo foi confirmado, iniciando instalação automática...[/yellow]")
+            try:
+                self.install_windows_package("NVDA", "NVAccess.NVDA", "nvda")
+                self.log("[green]NVDA instalado com sucesso via gerenciador de pacotes![/green]")
+            except Exception as e:
+                # Se o Winget e o Choco falharem, aí sim retornamos a exceção.
+                raise Exception(
+                    "O NVDA não foi encontrado e a tentativa de instalação automática falhou.\n"
+                    f"Detalhes: {e}\n\n"
+                    "Por favor, instale o NVDA manualmente ou escolha a Configuração do Desenvolvedor (Opção 1)."
+                )
+        else:
+            self.log("[green]Pré-requisito confirmado: NVDA detectado com sucesso.[/green]")
 
     # Realiza a instalação das dependências do ambiente caso necessário.
     def install_windows_package(self, package_name, winget_id, choco_id):

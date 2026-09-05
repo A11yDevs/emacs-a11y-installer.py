@@ -37,11 +37,55 @@ class InstallerGUI:
         self.btn_native.pack(fill=tk.X, padx=40, pady=5)
         self.btn_native.bind("<Return>", lambda e: self.btn_native.invoke())
 
+        # Quando o botão 1 está focado e o usuário aperta Baixo ou Direita, move para o botão 2.
+        self.btn_dev.bind("<Down>", lambda e: self.btn_native.focus_set())
+        self.btn_dev.bind("<Right>", lambda e: self.btn_native.focus_set())
+        
+        # Quando o botão 2 está focado e o usuário aperta Cima ou Esquerda, move para o botão 1.
+        self.btn_native.bind("<Up>", lambda e: self.btn_dev.focus_set())
+        self.btn_native.bind("<Left>", lambda e: self.btn_dev.focus_set())
+
+        # Padrão da interface (focável e interativa).
         self.log_area = scrolledtext.ScrolledText(
-            root, wrap=tk.WORD, height=12, font=("Arial", 10), state=tk.DISABLED
+            root, wrap=tk.WORD, height=12, font=("Arial", 10)
         )
         self.log_area.pack(padx=20, pady=15, fill=tk.BOTH, expand=True)
+        
+        # Intercepta eventos de teclado e mouse para torná-lo 'Somente Leitura'
+        self.log_area.bind("<Key>", self._bloquear_edicao)
+        self.log_area.bind("<<Paste>>", lambda e: "break")
+        self.log_area.bind("<<Cut>>", lambda e: "break")
+
         self.btn_dev.focus_set()
+
+    def _bloquear_edicao(self, event):
+        """
+        Bloqueia a digitação na área de log, garantindo que seja apenas leitura.
+        """
+        # Trata a navegação de foco.
+        if event.keysym == "Tab":
+            self.log_area.tk_focusNext().focus()
+            return "break"
+            
+        # O Shift+Tab é reconhecido diferentemente no Linux (ISO_Left_Tab) e Windows.
+        if event.keysym in ("ISO_Left_Tab", "BackTab"): 
+            self.log_area.tk_focusPrev().focus()
+            return "break"
+            
+        # Teclas permitidas para navegação interna do cursor.
+        teclas_navegacao = {
+            "Up", "Down", "Left", "Right", "Home", "End", "Prior", "Next", 
+            "Shift_L", "Shift_R", "Control_L", "Control_R", 
+            "Alt_L", "Alt_R", "Caps_Lock", "Num_Lock", "Scroll_Lock"
+        }
+        
+        # Permite atalho padrão de cópia (Ctrl + C) para o usuário copiar o log.
+        if event.state & 0x0004 and event.keysym.lower() == 'c':
+            return None
+            
+        # Se a tecla digitada não for de navegação, interrompe a ação do usuário.
+        if event.keysym not in teclas_navegacao:
+            return "break"
 
     def safe_log(self, text):
         """Método seguro para receber textos de outras threads."""
@@ -50,10 +94,9 @@ class InstallerGUI:
 
     def _append_log(self, text):
         """Atualiza a caixa de texto na interface."""
-        self.log_area.config(state=tk.NORMAL)
+        # Não é mais necessário alterar config(state) já que a caixa está em estado nativo
         self.log_area.insert(tk.END, text + "\n")
         self.log_area.see(tk.END)
-        self.log_area.config(state=tk.DISABLED)
         self.root.title(f"Instalador - A11yDevs | Status: {text[:30]}...")
 
     def preparar_instalacao(self, use_native):

@@ -278,29 +278,60 @@ class WindowsInstaller(BaseInstaller):
 # Módulo direcionado para instalação e configuração do ambiente para usuários Linux.
 class LinuxInstaller(BaseInstaller):
 
+    def __init__(self, logger_func):
+        super().__init__(logger_func)
+        self.require_espeak_install = False # Marcador de estado para instalação condicional.
+
     def check_native_prerequisites(self):
-        self.log("[yellow]Verificando pré-requisitos do ambiente nativo (eSpeak NG)...[/yellow]")
+        self.log("[yellow]Verificando pré-requisitos do ambiente nativo eSpeak NG...[/yellow]")
         
         # Verifica se o binário do espeak ou espeak-ng existe no sistema Linux.
         has_espeak = shutil.which("espeak") or shutil.which("espeak-ng")
         
         if not has_espeak:
-            raise Exception("Sintetizador nativo (eSpeak / eSpeak NG) não detectado no sistema!\n\nA configuração 'Leitor de Telas Nativo' requer que o ambiente de acessibilidade do Linux já esteja instalado e funcional.\nInstale o eSpeak NG antes de prosseguir.")
-            
-        self.log("[green]Pré-requisito confirmado: eSpeak / eSpeak-NG detectado com sucesso.[/green]")
+            # Ativa o gatilho para incluir o espeak-ng na instalação de dependências.
+            self.require_espeak_install = True
+            self.log("[yellow]eSpeak NG ausente. Como o ambiente foi confirmado, ele será instalado automaticamente.[/yellow]")
+        else:
+            self.log("[green]Pré-requisito confirmado: Speak-NG detectado com sucesso.[/green]")
 
     # Instalação de dependências do ambiente.
     def install_dependencies(self):
         self.log("[cyan]Sistema Debian ou Ubuntu detectado. Verificando dependências.[/cyan]")
-        pacotes = ["emacs", "git", "tcl", "tclx", "espeak-ng", "make", "g++"]
+        
+        # Pacotes de dependências e configurações do ambiente.
+        pacotes = ["emacs", "git", "tcl", "tclx", "make", "g++"]
+        
+        # Adiciona o espeak-ng dinamicamente caso a Opção 2 tenha marcado como ausente.
+        if self.require_espeak_install:
+            pacotes.append("espeak-ng")
+            
         env = os.environ.copy()
         env["DEBIAN_FRONTEND"] = "noninteractive"
         
-        self.log("[yellow]Atualizando repositórios de sistema silenciosamente.[/yellow]")
-        self.run_command(["sudo", "apt-get", "update", "-qq"])
+        # Invocar a janela de senha do Linux para requisições da instalação.
+        if shutil.which("pkexec"):
+            cmd_prefix = ["pkexec"]
+            self.log("[yellow]Uma janela do sistema solicitará sua senha de administrador (root) para a instalação das dependências.[/yellow]")
+        else:
+            cmd_prefix = ["sudo"]
+            self.log("[yellow]Atenção: O sistema pedirá sua senha no terminal de onde o instalador foi executado.[/yellow]")
         
-        self.log("[yellow]Instalando pacotes base. Esse processo é silencioso.[/yellow]")
-        self.run_command(["sudo", "-E", "apt-get", "install", "-y", "-qq"] + pacotes, env=env)
+        try:
+            self.log("[yellow]Atualizando repositórios de sistema silenciosamente.[/yellow]")
+            
+            if cmd_prefix == ["pkexec"]:
+                self.run_command(cmd_prefix + ["apt-get", "update", "-qq"])
+                self.log("[yellow]Instalando pacotes requisitados. Esse processo é silencioso.[/yellow]")
+                self.run_command(cmd_prefix + ["env", "DEBIAN_FRONTEND=noninteractive", "apt-get", "install", "-y", "-qq"] + pacotes)
+            else:
+                subprocess.run(cmd_prefix + ["apt-get", "update", "-qq"], check=True)
+                self.log("[yellow]Instalando pacotes requisitados. Esse processo é silencioso.[/yellow]")
+                subprocess.run(cmd_prefix + ["-E", "apt-get", "install", "-y", "-qq"] + pacotes, check=True, env=env)
+                
+        except Exception as e:
+            self.log(f"[bold red]Falha na instalação de pacotes:[/bold red] {e}")
+            raise Exception("Erro ao utilizar o apt-get. Verifique sua conexão e senha de administrador.")
 
     # Carregamento do Emacspeak para as configurações de usuário.
     def setup_emacspeak(self, use_native):

@@ -217,6 +217,90 @@ class WindowsInstaller(BaseInstaller):
             self.log("[yellow]Instalando GNU Emacs. Esse processo pode demorar um pouco.[/yellow]")
             self.install_windows_package("GNU Emacs", "GNU.Emacs", "emacs")
 
+    # Criação do perfil dinâmico no NVDA para a troca automática do sintetizador de voz dentro do GNU Emacs.
+    def configure_nvda_dynamic_profile(self):
+        """Cria um perfil dinâmico no NVDA para alternar para o sintetizador de voz no GNU Emacs."""
+        self.log("[yellow]Configurando troca dinâmica para eSpeak NG no Emacs...[/yellow]")
+        
+        # Localiza o executável do NVDA.
+        nvda_exe = shutil.which("nvda")
+        if not nvda_exe:
+            for p in [r"C:\Program Files\NVDA\nvda.exe", r"C:\Program Files (x86)\NVDA\nvda.exe"]:
+                if os.path.exists(p):
+                    nvda_exe = p
+                    break
+        
+        if not nvda_exe:
+            self.log("[red]Executável do NVDA não encontrado. Configuração de perfil dinâmico ignorada.[/red]")
+            return
+
+        appdata = os.environ.get("APPDATA")
+        if not appdata: return
+        nvda_dir = os.path.join(appdata, "nvda")
+        
+        if not os.path.exists(nvda_dir):
+            return
+
+        # Avisa o usuário sobre o reinício do NVDA usando a DLL para que o processo não seja apenas jogado na cara do usuário.
+        base_path = sys._MEIPASS if hasattr(sys, '_MEIPASS') else os.path.abspath(".")
+        dll_name = "nvdaControllerClient64.dll" if sys.maxsize > 2**32 else "nvdaControllerClient32.dll"
+        try:
+            import ctypes
+            nvda_dll = ctypes.windll.LoadLibrary(os.path.join(base_path, dll_name))
+            nvda_dll.nvdaController_speakText("Configurando vozes. O N V D A será reiniciado em 3 segundos.")
+            import time
+            time.sleep(3)
+        except Exception:
+            import time
+            pass # Continua mesmo se a voz falhar.
+
+        # Desliga o NVDA para salvar as configs e liberar o lock dos arquivos.
+        self.log("[yellow]Reiniciando o leitor de telas...[/yellow]")
+        subprocess.run([nvda_exe, "-q"], check=False)
+        time.sleep(2) # Aguarda o encerramento total do processo.
+
+        try:
+            # Cria o Perfil isolado para o GNU Emacs com o sintetizador de voz otimizado.
+            profiles_dir = os.path.join(nvda_dir, "profiles")
+            os.makedirs(profiles_dir, exist_ok=True)
+            emacs_profile = os.path.join(profiles_dir, "emacs.ini")
+            
+            with open(emacs_profile, "w", encoding="utf-8") as f:
+                f.write("[speech]\n\tsynth = espeak\n")
+                
+            # Injeta o gatilho (Trigger) no nvda.ini para a alteração necessária.
+            nvda_ini = os.path.join(nvda_dir, "nvda.ini")
+            if os.path.exists(nvda_ini):
+                with open(nvda_ini, "r", encoding="utf-8") as f:
+                    linhas = f.readlines()
+
+                # Verifica se o gatilho já existe para não duplicar o mesmo caminho de ativação.
+                if not any("emacs = emacs" in linha for linha in linhas):
+                    idx_triggers, idx_appmodules = -1, -1
+                    for i, linha in enumerate(linhas):
+                        if linha.strip() == "[profileTriggers]":
+                            idx_triggers = i
+                        elif idx_triggers != -1 and linha.strip() == "[[appModules]]":
+                            idx_appmodules = i
+                            break
+                    
+                    # Lógica de injeção no formato aninhado do NVDA.
+                    if idx_appmodules != -1:
+                        linhas.insert(idx_appmodules + 1, "        emacs = emacs\n")
+                    elif idx_triggers != -1:
+                        linhas.insert(idx_triggers + 1, "    [[appModules]]\n        emacs = emacs\n")
+                    else:
+                        linhas.extend(["\n[profileTriggers]\n", "    [[appModules]]\n", "        emacs = emacs\n"])
+                        
+                    with open(nvda_ini, "w", encoding="utf-8") as f:
+                        f.writelines(linhas)
+        except Exception as e:
+            self.log(f"[red]Erro ao injetar configurações do NVDA: {e}[/red]")
+            
+        # Liga o NVDA novamente após o processo ser finalizado.
+        subprocess.Popen([nvda_exe])
+        self.log("[green]NVDA reiniciado com sucesso! Troca dinâmica ativada.[/green]")
+
     # Carregamento das configurações de voz nativa do usuário.
     def setup_emacspeak(self, use_native):
         self.log("[yellow]Extraindo e configurando o servidor de áudio da aplicação.[/yellow]")
@@ -245,6 +329,9 @@ class WindowsInstaller(BaseInstaller):
             dll_name = "nvdaControllerClient64.dll" if is_64bit else "nvdaControllerClient32.dll"
             files_to_copy = ["connect_a11y.exe", dll_name]
             server_executable = "connect_a11y.exe"
+
+            # Faz a chamada da troca de perfil.
+            self.configure_nvda_dynamic_profile()
         else:
 
             # Carregamento do servidor de voz para as configurações de desenvolvedor.
@@ -293,7 +380,7 @@ class LinuxInstaller(BaseInstaller):
             self.require_espeak_install = True
             self.log("[yellow]eSpeak NG ausente. Como o ambiente foi confirmado, ele será instalado automaticamente.[/yellow]")
         else:
-            self.log("[green]Pré-requisito confirmado: Speak-NG detectado com sucesso.[/green]")
+            self.log("[green]Pré-requisito confirmado: eSpeak-NG detectado com sucesso.[/green]")
 
     # Instalação de dependências do ambiente.
     def install_dependencies(self):

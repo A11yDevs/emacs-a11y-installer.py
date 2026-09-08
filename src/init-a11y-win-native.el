@@ -1,4 +1,4 @@
-;; init-a11y.el --- Voz e Acessibilidade ---
+;;; init-a11y.el --- Voz e Acessibilidade --- -*- lexical-binding: t -*-
 
 ;; --- Configurações Básicas de Áudio e Feedback ---
 (setq emacspeak-play-program nil)

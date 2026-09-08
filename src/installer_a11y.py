@@ -218,12 +218,12 @@ class WindowsInstaller(BaseInstaller):
             self.log("[yellow]Instalando GNU Emacs. Esse processo pode demorar um pouco.[/yellow]")
             self.install_windows_package("GNU Emacs", "GNU.Emacs", "emacs")
 
-    # Criação do perfil dinâmico no NVDA para a troca automática do sintetizador de voz dentro do GNU Emacs.
+        # Criação do perfil dinâmico no NVDA para a troca automática do sintetizador de voz dentro do GNU Emacs.
     def configure_nvda_dynamic_profile(self):
         """Cria um perfil dinâmico no NVDA para alternar para o sintetizador de voz no GNU Emacs."""
         self.log("[yellow]Configurando troca dinâmica para eSpeak NG no Emacs...[/yellow]")
         
-	    # Localiza o executável do NVDA.
+        # Localiza o executável do NVDA.
         nvda_exe = shutil.which("nvda")
         if not nvda_exe:
             for p in [r"C:\Program Files\NVDA\nvda.exe", r"C:\Program Files (x86)\NVDA\nvda.exe"]:
@@ -240,21 +240,25 @@ class WindowsInstaller(BaseInstaller):
         nvda_dir = os.path.join(appdata, "nvda")
         if not os.path.exists(nvda_dir): return
 
-	    # Avisa o usuário sobre o reinício do NVDA usando a DLL para que o processo não seja apenas jogado na cara do usuário.
+        # Avisa o usuário sobre o reinício do NVDA usando a DLL.
         base_path = sys._MEIPASS if hasattr(sys, '_MEIPASS') else os.path.abspath(".")
         dll_name = "nvdaControllerClient64.dll" if sys.maxsize > 2**32 else "nvdaControllerClient32.dll"
         
         try:
             import ctypes
             nvda_dll = ctypes.windll.LoadLibrary(os.path.join(base_path, dll_name))
-            nvda_dll.nvdaController_speakText("Configurando vozes. O NVDA será reiniciado em 2 segundos.")
+            nvda_dll.nvdaController_speakText("Configurando vozes. O NVDA será reiniciado em 3 segundos.")
             time.sleep(3)
         except Exception:
             pass # Continua mesmo se a voz falhar.
-	
-	    # Desliga o NVDA para salvar as configs e liberar o lock dos arquivos.
+    
+        # Desliga o NVDA graciosamente (Usa shell=True para evitar WinError 740)
         self.log("[yellow]Reiniciando o leitor de telas...[/yellow]")
-        subprocess.run([nvda_exe, "-q"], check=False)
+        try:
+            subprocess.run(f'"{nvda_exe}" -q', shell=True, check=False)
+        except Exception as e:
+            self.log(f"[yellow]Aviso ao desligar NVDA: {e}[/yellow]")
+            
         time.sleep(3)
 
         try:
@@ -264,15 +268,15 @@ class WindowsInstaller(BaseInstaller):
             emacs_profile = os.path.join(profiles_dir, "emacs.ini")
             
             with open(emacs_profile, "w", encoding="utf-8") as f:
-                f.write("[speech]\n\tsynth = espera\n")
+                f.write("[speech]\n\tsynth = espeak\n")
             
             # Injeta o gatilho (Trigger) no nvda.ini para a alteração necessária.
             nvda_ini = os.path.join(nvda_dir, "nvda.ini")
             if os.path.exists(nvda_ini):
                 with open(nvda_ini, "r", encoding="utf-8") as f:
                     linhas = f.readlines()
-		
-		        # Verifica se o gatilho já existe para não duplicar o mesmo caminho de ativação.
+        
+                # Verifica se o gatilho já existe para não duplicar o mesmo caminho de ativação.
                 if not any("emacs = emacs" in linha for linha in linhas):
                     idx_triggers, idx_appmodules = -1, -1
                     for i, linha in enumerate(linhas):
@@ -296,8 +300,8 @@ class WindowsInstaller(BaseInstaller):
             self.log(f"[red]Erro ao injetar configurações do NVDA: {e}[/red]")
             
         try:
-            # Liga o NVDA novamente após o processo ser finalizado.
-            subprocess.Popen([nvda_exe])
+            # Liga o NVDA novamente através de um comando válido.
+            subprocess.Popen(f'"{nvda_exe}"', shell=True)
             self.log("[green]NVDA reiniciado com sucesso! Troca dinâmica ativada.[/green]")
         except Exception as e:
              self.log(f"[red]Falha ao reabrir o NVDA automaticamente: {e}[/red]")

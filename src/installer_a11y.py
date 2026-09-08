@@ -5,6 +5,7 @@ import os
 import shutil
 import glob
 import threading
+import time
 import tkinter as tk
 
 # Importa a interface visual do programa.
@@ -222,7 +223,7 @@ class WindowsInstaller(BaseInstaller):
         """Cria um perfil dinâmico no NVDA para alternar para o sintetizador de voz no GNU Emacs."""
         self.log("[yellow]Configurando troca dinâmica para eSpeak NG no Emacs...[/yellow]")
         
-        # Localiza o executável do NVDA.
+	    # Localiza o executável do NVDA.
         nvda_exe = shutil.which("nvda")
         if not nvda_exe:
             for p in [r"C:\Program Files\NVDA\nvda.exe", r"C:\Program Files (x86)\NVDA\nvda.exe"]:
@@ -231,33 +232,30 @@ class WindowsInstaller(BaseInstaller):
                     break
         
         if not nvda_exe:
-            self.log("[red]Executável do NVDA não encontrado. Configuração de perfil dinâmico ignorada.[/red]")
+            self.log("[red]Executável do NVDA não encontrado. Configuração ignorada.[/red]")
             return
 
         appdata = os.environ.get("APPDATA")
         if not appdata: return
         nvda_dir = os.path.join(appdata, "nvda")
-        
-        if not os.path.exists(nvda_dir):
-            return
+        if not os.path.exists(nvda_dir): return
 
-        # Avisa o usuário sobre o reinício do NVDA usando a DLL para que o processo não seja apenas jogado na cara do usuário.
+	    # Avisa o usuário sobre o reinício do NVDA usando a DLL para que o processo não seja apenas jogado na cara do usuário.
         base_path = sys._MEIPASS if hasattr(sys, '_MEIPASS') else os.path.abspath(".")
         dll_name = "nvdaControllerClient64.dll" if sys.maxsize > 2**32 else "nvdaControllerClient32.dll"
+        
         try:
             import ctypes
             nvda_dll = ctypes.windll.LoadLibrary(os.path.join(base_path, dll_name))
-            nvda_dll.nvdaController_speakText("Configurando vozes. O N V D A será reiniciado em 3 segundos.")
-            import time
+            nvda_dll.nvdaController_speakText("Configurando vozes. O NVDA será reiniciado em 2 segundos.")
             time.sleep(3)
         except Exception:
-            import time
             pass # Continua mesmo se a voz falhar.
-
-        # Desliga o NVDA para salvar as configs e liberar o lock dos arquivos.
+	
+	    # Desliga o NVDA para salvar as configs e liberar o lock dos arquivos.
         self.log("[yellow]Reiniciando o leitor de telas...[/yellow]")
         subprocess.run([nvda_exe, "-q"], check=False)
-        time.sleep(2) # Aguarda o encerramento total do processo.
+        time.sleep(3)
 
         try:
             # Cria o Perfil isolado para o GNU Emacs com o sintetizador de voz otimizado.
@@ -266,15 +264,15 @@ class WindowsInstaller(BaseInstaller):
             emacs_profile = os.path.join(profiles_dir, "emacs.ini")
             
             with open(emacs_profile, "w", encoding="utf-8") as f:
-                f.write("[speech]\n\tsynth = espeak\n")
-                
+                f.write("[speech]\n\tsynth = espera\n")
+            
             # Injeta o gatilho (Trigger) no nvda.ini para a alteração necessária.
             nvda_ini = os.path.join(nvda_dir, "nvda.ini")
             if os.path.exists(nvda_ini):
                 with open(nvda_ini, "r", encoding="utf-8") as f:
                     linhas = f.readlines()
-
-                # Verifica se o gatilho já existe para não duplicar o mesmo caminho de ativação.
+		
+		        # Verifica se o gatilho já existe para não duplicar o mesmo caminho de ativação.
                 if not any("emacs = emacs" in linha for linha in linhas):
                     idx_triggers, idx_appmodules = -1, -1
                     for i, linha in enumerate(linhas):
@@ -283,7 +281,7 @@ class WindowsInstaller(BaseInstaller):
                         elif idx_triggers != -1 and linha.strip() == "[[appModules]]":
                             idx_appmodules = i
                             break
-                    
+
                     # Lógica de injeção no formato aninhado do NVDA.
                     if idx_appmodules != -1:
                         linhas.insert(idx_appmodules + 1, "        emacs = emacs\n")
@@ -297,9 +295,12 @@ class WindowsInstaller(BaseInstaller):
         except Exception as e:
             self.log(f"[red]Erro ao injetar configurações do NVDA: {e}[/red]")
             
-        # Liga o NVDA novamente após o processo ser finalizado.
-        subprocess.Popen([nvda_exe])
-        self.log("[green]NVDA reiniciado com sucesso! Troca dinâmica ativada.[/green]")
+        try:
+            # Liga o NVDA novamente após o processo ser finalizado.
+            subprocess.Popen([nvda_exe])
+            self.log("[green]NVDA reiniciado com sucesso! Troca dinâmica ativada.[/green]")
+        except Exception as e:
+             self.log(f"[red]Falha ao reabrir o NVDA automaticamente: {e}[/red]")
 
     # Carregamento das configurações de voz nativa do usuário.
     def setup_emacspeak(self, use_native):
@@ -308,7 +309,7 @@ class WindowsInstaller(BaseInstaller):
         emacspeak_dir = os.path.join(emacs_dir, "emacspeak")
         os.makedirs(emacs_dir, exist_ok=True)
 
-        # Instalação do Emacspeak para as configurações de desenvolvedor.
+	    # Instalação do Emacspeak para as configurações de desenvolvedor.
         if not os.path.exists(emacspeak_dir):
             self.log("[yellow]Baixando repositório oficial do Emacspeak. Aguarde.[/yellow]")
             try:
@@ -323,22 +324,24 @@ class WindowsInstaller(BaseInstaller):
         
         base_path = sys._MEIPASS if hasattr(sys, '_MEIPASS') else os.path.abspath(".")
 
-        # Carregamento da biblioteca de uso do NVDA para as configurações nativas de usuário.
+	    # Carregamento da biblioteca de uso do NVDA para as configurações nativas de usuário.
         if use_native:
             is_64bit = platform.architecture()[0] == '64bit'
             dll_name = "nvdaControllerClient64.dll" if is_64bit else "nvdaControllerClient32.dll"
+            
+            # Executável para execução das bibliotecas de uso.
             files_to_copy = ["connect_a11y.exe", dll_name]
             server_executable = "connect_a11y.exe"
-
-            # Faz a chamada da troca de perfil.
+		
+	        # Faz a chamada da troca de perfil.
             self.configure_nvda_dynamic_profile()
         else:
-
+            
             # Carregamento do servidor de voz para as configurações de desenvolvedor.
             files_to_copy = ["SharpWin.exe"]
             server_executable = "SharpWin.exe"
             
-        # Injeta o arquivo de acessibilidade de acordo com o ambiente do usuário.
+	    # Injeta o arquivo de acessibilidade de acordo com o ambiente do usuário.
         self.inject_accessibility_el("Windows", use_native)
             
         for file_name in files_to_copy:
@@ -482,8 +485,12 @@ def processo_background(use_native, app_gui):
         app_gui.root.after(0, app_gui.finalizar_sucesso)
 
     except Exception as e:
+        # Armazena o erro em uma variável local que persistirá na memória.
+        erro_msg = str(e)
         app_gui.safe_log(f"[bold red]Processo interrompido.[/bold red]")
-        app_gui.root.after(0, lambda: app_gui.finalizar_erro(str(e)))
+        
+        # Argumento padrão (err=erro_msg) garante que o lambda lembre do texto exato.
+        app_gui.root.after(0, lambda err=erro_msg: app_gui.finalizar_erro(err))
 
 
 # ---------------------------------------------------------
@@ -522,7 +529,7 @@ if __name__ == "__main__":
     def iniciar_thread_instalacao(use_native):
         threading.Thread(
             target=processo_background, 
-            args=(use_native, app), 
+            args=(use_native, app),
             daemon=True
         ).start()
 

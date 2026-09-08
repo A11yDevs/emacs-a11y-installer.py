@@ -70,7 +70,7 @@ class BaseInstaller:
         init_file = os.path.join(emacs_dir, "init.el")
 
         elisp_code = f"""
-;; Configuração Base do GNU Emacs/Emacspeak
+;;; --- Configuração Base do GNU Emacs/Emacspeak --- -*- lexical-binding: t -*-
 
 ;; Carrega as configurações de acessibilidade de acordo com a arquitetura/escolha do usuário
 (load (expand-file-name "lisp/init-accessibility.el" user-emacs-directory))
